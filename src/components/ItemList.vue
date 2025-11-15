@@ -25,6 +25,7 @@ class="flex flex-col transition-all duration-200 overflow-x-hidden border-r dark
   import SubList from '@/components/SubList.vue';
   import { getData } from '@/api/mock';
   import { useRequest } from 'vue-hooks-plus';
+  import { saveUploadResource, getUploadResources } from '@/utils/uploadStore';
   const props = defineProps({
     activeKey: {
       type: String,
@@ -49,6 +50,36 @@ class="flex flex-col transition-all duration-200 overflow-x-hidden border-r dark
     refresh();
   });
 
+  async function mergeLocalUploads() {
+    const activeKey = props.activeKey;
+    if (!activeKey) return;
+    const uploads = await getUploadResources(activeKey);
+    const list = (listData as any).value || [];
+    uploads.forEach(record => {
+      const target = list.find((sub: any) => sub.type === record.groupType && sub.title === record.groupTitle);
+      if (!target) return;
+      if (!Array.isArray(target.items)) {
+        target.items = [];
+      }
+      const source = URL.createObjectURL(record.file);
+      target.items.unshift({
+        name: record.name,
+        format: record.format,
+        cover: record.cover,
+        source,
+        width: record.width,
+        height: record.height,
+        fps: record.fps,
+        frameCount: record.frameCount,
+        time: record.time
+      });
+    });
+  }
+
+  watch(listData, () => {
+    mergeLocalUploads();
+  });
+
   const title = computed(() => props.title);
   const collapse = ref(props.defaultCollapse);
   function switchCollapse() {
@@ -60,13 +91,34 @@ class="flex flex-col transition-all duration-200 overflow-x-hidden border-r dark
   watch(() => props.defaultCollapse, newValue => {
     collapse.value = newValue;
   });
-  function handleUpload(item: Record<string, any>, subIndex: number) {
+  async function handleUpload(item: Record<string, any>, subIndex: number) {
     if (!item) return;
     const list = (listData as any).value || [];
     const target = list[subIndex];
     if (!target || !Array.isArray(target.items)) return;
+    const { file, groupType, groupTitle, ...rest } = item as any;
     target.items.unshift({
-      ...item
+      ...rest
     });
+    if (file) {
+      try {
+        await saveUploadResource({
+          activeKey: props.activeKey,
+          groupType: groupType || target.type,
+          groupTitle: groupTitle || target.title,
+          name: rest.name,
+          format: rest.format,
+          cover: rest.cover,
+          width: rest.width,
+          height: rest.height,
+          fps: rest.fps,
+          frameCount: rest.frameCount,
+          time: rest.time,
+          file
+        });
+      } catch (e) {
+        // ignore
+      }
+    }
   }
 </script>

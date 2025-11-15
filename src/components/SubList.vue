@@ -121,7 +121,10 @@ class="flex flex-col mb-2 p-1.5" :class="{ 'w-full': isAudio }" v-for="(item, id
           height,
           fps,
           frameCount,
-          time
+          time,
+          file,
+          groupType: props.type,
+          groupTitle: (props.listData as any)?.title
         });
       };
       if (ctx) {
