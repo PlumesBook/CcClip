@@ -1,5 +1,2 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
-
-export PATH="/Users/plumesbook/.nvm/versions/node/v20.19.5/bin:$PATH"
-pnpm lint
