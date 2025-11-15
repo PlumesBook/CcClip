@@ -25,7 +25,8 @@ class="flex flex-col transition-all duration-200 overflow-x-hidden border-r dark
   import SubList from '@/components/SubList.vue';
   import { getData } from '@/api/mock';
   import { useRequest } from 'vue-hooks-plus';
-  import { saveUploadResource, getUploadResources } from '@/utils/uploadStore';
+  import { saveUploadResource, getUploadResources, type UploadStoreRecord } from '@/utils/uploadStore';
+  import { useTrackState } from '@/stores/trackState';
   const props = defineProps({
     activeKey: {
       type: String,
@@ -46,22 +47,55 @@ class="flex flex-col transition-all duration-200 overflow-x-hidden border-r dark
     }
   });
   const { data: listData, refresh } = useRequest(() => getData(props.activeKey));
+  const trackStore = useTrackState();
   watch(() => props.activeKey, () => {
     refresh();
   });
+
+  function rebindTrackSources(uploads: UploadStoreRecord[], urlMap: Map<string, string>) {
+    const uploadMap = new Map<string, UploadStoreRecord>();
+    uploads.forEach(record => {
+      uploadMap.set(record.id, record);
+    });
+    trackStore.trackList.forEach(line => {
+      line.list.forEach((item: any) => {
+        if (item.type !== 'video') return;
+        const uploadId = item.uploadId as string | undefined;
+        if (!uploadId) return;
+        const record = uploadMap.get(uploadId);
+        if (!record) return;
+        let source = urlMap.get(record.id);
+        if (!source) {
+          source = URL.createObjectURL(record.file);
+          urlMap.set(record.id, source);
+        }
+        item.source = source;
+        item.width = record.width;
+        item.height = record.height;
+        item.time = record.time;
+        item.frameCount = record.frameCount;
+        item.cover = record.cover;
+      });
+    });
+  }
 
   async function mergeLocalUploads() {
     const activeKey = props.activeKey;
     if (!activeKey) return;
     const uploads = await getUploadResources(activeKey);
     const list = (listData as any).value || [];
+    const urlMap = new Map<string, string>();
     uploads.forEach(record => {
       const target = list.find((sub: any) => sub.type === record.groupType && sub.title === record.groupTitle);
       if (!target) return;
       if (!Array.isArray(target.items)) {
         target.items = [];
       }
-      const source = URL.createObjectURL(record.file);
+      let source = urlMap.get(record.id);
+      if (!source) {
+        source = URL.createObjectURL(record.file);
+        urlMap.set(record.id, source);
+      }
       target.items.unshift({
         name: record.name,
         format: record.format,
@@ -71,9 +105,11 @@ class="flex flex-col transition-all duration-200 overflow-x-hidden border-r dark
         height: record.height,
         fps: record.fps,
         frameCount: record.frameCount,
-        time: record.time
+        time: record.time,
+        uploadId: record.id
       });
     });
+    rebindTrackSources(uploads, urlMap);
   }
 
   watch(listData, () => {
@@ -97,12 +133,13 @@ class="flex flex-col transition-all duration-200 overflow-x-hidden border-r dark
     const target = list[subIndex];
     if (!target || !Array.isArray(target.items)) return;
     const { file, groupType, groupTitle, ...rest } = item as any;
-    target.items.unshift({
+    const insertItem: any = {
       ...rest
-    });
+    };
+    target.items.unshift(insertItem);
     if (file) {
       try {
-        await saveUploadResource({
+        const { id } = await saveUploadResource({
           activeKey: props.activeKey,
           groupType: groupType || target.type,
           groupTitle: groupTitle || target.title,
@@ -116,6 +153,7 @@ class="flex flex-col transition-all duration-200 overflow-x-hidden border-r dark
           time: rest.time,
           file
         });
+        insertItem.uploadId = id;
       } catch (e) {
         // ignore
       }
