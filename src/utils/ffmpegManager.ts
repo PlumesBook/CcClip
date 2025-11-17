@@ -191,6 +191,17 @@ class FFManager {
             this.ffmpeg.FS('mkdir', filePath);
         });
     }
+    // 清理导出目录中的临时帧文件
+    clearExportFrames() {
+        const dirList = this.readDir(this.pathConfig.exportPath) || [];
+        dirList.forEach((name: string) => {
+            if (name === '.' || name === '..') return;
+            if (name.startsWith('frame-') && name.endsWith('.png')) {
+                const filePath = `${this.pathConfig.exportPath}${name}`;
+                this.rmFile(filePath);
+            }
+        });
+    }
     // 执行钩子
     runHook(type: keyof typeof FFManager.Hooks) {
         return FFManager.Hooks[type] && FFManager.Hooks[type](this);

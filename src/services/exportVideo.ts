@@ -218,6 +218,11 @@ export async function exportProjectToVideo(ffmpeg: FFManager, options: ExportVid
 
     const blob = ffmpeg.getFileBlobByPath(finalVideoPath, 'video/mp4');
 
+    // 清理导出过程中生成的临时帧文件
+    if (typeof (ffmpeg as any).clearExportFrames === 'function') {
+        (ffmpeg as any).clearExportFrames();
+    }
+
     onProgress && onProgress({ phase: 'done', progress: 1, totalFrames, currentFrame: totalFrames });
 
     const fileName = formatExportFileName(projectName);
