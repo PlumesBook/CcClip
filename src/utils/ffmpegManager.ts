@@ -26,6 +26,7 @@ class FFManager {
         framePath: '/frame/', // 持久化帧文件，用于轨道
         playFrame: '/pframe/', // 播放帧文件，因为文件体积大，可能会不定时删除
         audioPath: '/audio/', // 合成音频文件
+        exportPath: '/export/', // 导出视频中间文件目录（帧序列、无声视频等）
         logPath: '/logs/', // 命令日志文件目录
         wavePath: '/wave/' // 音频波形文件目录
     };
@@ -148,6 +149,12 @@ class FFManager {
         }
         this.logDir(filePath);
     }
+    // 写入帧图片（直接写入 Blob 数据）
+    async writeFrameImage(filePath: string, fileName: string, blob: Blob) {
+        const buffer = new Uint8Array(await blob.arrayBuffer());
+        await this.ffmpeg.FS('writeFile', `${filePath}${fileName}`, buffer);
+        this.logDir(filePath);
+    }
     // 获取文件buffer
     getFileBuffer(filePath: string, fileName: string, format: string) {
         const localPath = `${fileName}.${format}`;
@@ -157,6 +164,11 @@ class FFManager {
     getFileBlob(filePath: string, fileName: string, format: string) {
         const fileBuffer = this.getFileBuffer(filePath, fileName, format);
         return new Blob([fileBuffer], { type: FileTypeMap[format as keyof typeof FileTypeMap] });
+    }
+    // 通过完整路径获取文件Blob（用于导出成品文件）
+    getFileBlobByPath(path: string, mime: string) {
+        const data = this.ffmpeg.FS('readFile', path);
+        return new Blob([data], { type: mime });
     }
     /**
      * 获取文件url，用于下载
@@ -190,6 +202,24 @@ class FFManager {
         this.audioCache = [commands.join('')];
         if (this.fileExist(this.pathConfig.audioPath, fileName)) this.rmFile(filePath); // 重新生成前删除
         return this.run(commands);
+    }
+    /**
+     * 将帧序列合成为无声 mp4 视频
+     */
+    async mergeVideoFromFrames(frameDir: string, fps: number, videoName: string) {
+        const framePattern = `${frameDir}frame-%06d.png`;
+        const videoPath = `${frameDir}${videoName}`;
+        const { commands } = this.baseCommand.mergeVideoFromFrames(framePattern, fps, videoPath);
+        await this.run(commands);
+        return { videoPath };
+    }
+    /**
+     * 音视频合并成最终输出文件
+     */
+    async muxAudioVideo(videoPath: string, audioPath: string, outputPath: string) {
+        const { commands } = this.baseCommand.muxAudioVideo(videoPath, audioPath, outputPath);
+        await this.run(commands);
+        return { outputPath };
     }
     /**
      * 从视频中分离音频

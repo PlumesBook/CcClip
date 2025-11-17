@@ -80,6 +80,40 @@ export class Command { // 命令封装
             fileName
         };
     }
+    /**
+     * 将帧序列合成 mp4 视频
+     * @param framePattern  帧文件匹配模式，如 '/export/frame-%06d.png'
+     * @param fps           帧率
+     * @param videoPath     输出视频路径，如 '/export/video.mp4'
+     */
+    mergeVideoFromFrames(framePattern: string, fps: number, videoPath: string) {
+        return {
+            commands: [
+                '-r', String(fps),
+                '-i', framePattern,
+                '-c:v', 'libx264',
+                '-pix_fmt', 'yuv420p',
+                videoPath
+            ],
+            videoPath
+        };
+    }
+    /**
+     * 音视频合成（将无声 mp4 + 音频合并成最终输出）
+     */
+    muxAudioVideo(videoPath: string, audioPath: string, outputPath: string) {
+        return {
+            commands: [
+                '-i', videoPath,
+                '-i', audioPath,
+                '-c:v', 'copy',
+                '-c:a', 'aac',
+                '-shortest',
+                outputPath
+            ],
+            outputPath
+        };
+    }
     static genVideoAAC(path: string, videoName: string) {
         return `${path}${videoName}_A.aac`;
     }
