@@ -34,6 +34,12 @@ export function useVideoExport() {
 
     async function startExport() {
         if (!canExport.value || !ffmpeg) return;
+        const frameThreshold = 1800; // 约 60 秒（30fps）
+        if (playerStore.frameCount > frameThreshold) {
+            const seconds = Math.round(playerStore.frameCount / 30);
+            const confirmExport = window.confirm(`当前工程约 ${seconds} 秒，导出可能需要较长时间，确认继续导出吗？`);
+            if (!confirmExport) return;
+        }
         try {
             exporting.value = true;
             const controller = new AbortController();

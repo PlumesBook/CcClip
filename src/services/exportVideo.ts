@@ -164,9 +164,17 @@ export async function exportProjectToVideo(ffmpeg: FFManager, options: ExportVid
 
     const frameDir = ffmpeg.pathConfig.exportPath;
 
+    const yieldInterval = 16; // ms，约等于一帧
+    let lastYieldTime = performance.now();
+
     for (let i = 0; i < totalFrames; i++) {
         if (signal?.aborted) {
             throw new Error('Export aborted');
+        }
+        const now = performance.now();
+        if (now - lastYieldTime > yieldInterval) {
+            await new Promise(resolve => setTimeout(resolve, 0));
+            lastYieldTime = performance.now();
         }
         const frameIndex = i;
         ctx.fillStyle = bgColor;
