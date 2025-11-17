@@ -3,11 +3,12 @@ import { useTrackState, type TrackItem, type TrackLineItem } from '@/stores/trac
 import { useTrackAttrState } from '@/stores/trackAttribute';
 import { computedItemShowArea, isVideo } from '@/utils/common';
 import type FFManager from '@/utils/ffmpegManager';
+import { toRaw } from 'vue';
 
 export interface ExportVideoOptions {
     projectName?: string;
     onProgress?: (info: {
-        phase: 'prepare' | 'render-frames' | 'merge-video' | 'done';
+        phase: 'prepare' | 'merge-audio' | 'render-frames' | 'merge-video' | 'done';
         progress: number;
         currentFrame?: number;
         totalFrames?: number;
@@ -141,6 +142,17 @@ export async function exportProjectToVideo(ffmpeg: FFManager, options: ExportVid
 
     onProgress && onProgress({ phase: 'prepare', progress: 0, totalFrames, currentFrame: 0 });
 
+    // 阶段 2：音频合成（如果存在可用音轨）
+    const hasAudio = playerStore.audioPlayData && playerStore.audioPlayData.length > 0;
+    let audioFsPath: string | null = null;
+    if (hasAudio) {
+        onProgress && onProgress({ phase: 'merge-audio', progress: 0, totalFrames, currentFrame: 0 });
+        await ffmpeg.getAudio(playerStore.audioPlayData, toRaw(attrStore.trackAttrMap));
+        // getAudio 内部总是输出到 /audio/audio.mp3
+        audioFsPath = `${ffmpeg.pathConfig.audioPath}audio.mp3`;
+        onProgress && onProgress({ phase: 'merge-audio', progress: 1, totalFrames, currentFrame: 0 });
+    }
+
     const canvas = document.createElement('canvas');
     canvas.width = playerWidth;
     canvas.height = playerHeight;
@@ -187,7 +199,16 @@ export async function exportProjectToVideo(ffmpeg: FFManager, options: ExportVid
     onProgress && onProgress({ phase: 'merge-video', progress: 0, totalFrames, currentFrame: totalFrames });
 
     const { videoPath } = await ffmpeg.mergeVideoFromFrames(frameDir, fps, 'video.mp4');
-    const blob = ffmpeg.getFileBlobByPath(videoPath, 'video/mp4');
+
+    // 如存在音频轨，则进一步进行音视频合成
+    let finalVideoPath = videoPath;
+    if (audioFsPath) {
+        const outputPath = `${ffmpeg.pathConfig.exportPath}output.mp4`;
+        await ffmpeg.muxAudioVideo(videoPath, audioFsPath, outputPath);
+        finalVideoPath = outputPath;
+    }
+
+    const blob = ffmpeg.getFileBlobByPath(finalVideoPath, 'video/mp4');
 
     onProgress && onProgress({ phase: 'done', progress: 1, totalFrames, currentFrame: totalFrames });
 
