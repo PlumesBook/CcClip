@@ -116,6 +116,63 @@ async function drawTrackItem(
     }
 }
 
+async function renderFramesRange(
+    ctx: CanvasRenderingContext2D,
+    canvas: HTMLCanvasElement,
+    bgColor: string,
+    trackLines: TrackLineItem[],
+    trackAttrMap: Record<string, any>,
+    ffmpeg: FFManager,
+    frameDir: string,
+    options: {
+        startFrame: number;
+        endFrame: number;
+        signal?: AbortSignal;
+        onProgress?: ExportVideoOptions['onProgress'];
+        totalFrames: number;
+        yieldInterval: number;
+        lastYieldTimeRef: { value: number };
+    }
+) {
+    const { startFrame, endFrame, signal, onProgress, totalFrames, yieldInterval, lastYieldTimeRef } = options;
+    for (let frameIndex = startFrame; frameIndex < endFrame; frameIndex++) {
+        if (signal?.aborted) {
+            throw new Error('Export aborted');
+        }
+        const now = performance.now();
+        if (now - lastYieldTimeRef.value > yieldInterval) {
+            await new Promise(resolve => setTimeout(resolve, 0));
+            lastYieldTimeRef.value = performance.now();
+        }
+
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const activeTracks = collectActiveTracks(frameIndex, trackLines);
+        const videoTracks = activeTracks.filter(item => isVideo(item.type));
+        const otherTracks = activeTracks.filter(item => !isVideo(item.type));
+
+        for (const trackItem of videoTracks) {
+            await drawTrackItem(ctx, { width: canvas.width, height: canvas.height }, trackItem, trackAttrMap, ffmpeg, frameIndex);
+        }
+        for (const trackItem of otherTracks) {
+            await drawTrackItem(ctx, { width: canvas.width, height: canvas.height }, trackItem, trackAttrMap, ffmpeg, frameIndex);
+        }
+
+        const blob = await canvasToPngBlob(canvas);
+        const fileIndex = frameIndex + 1;
+        const fileName = `frame-${String(fileIndex).padStart(6, '0')}.png`;
+        await ffmpeg.writeFrameImage(frameDir, fileName, blob);
+
+        onProgress && onProgress({
+            phase: 'render-frames',
+            progress: fileIndex / totalFrames,
+            currentFrame: fileIndex,
+            totalFrames
+        });
+    }
+}
+
 export async function exportProjectToVideo(ffmpeg: FFManager, options: ExportVideoOptions): Promise<ExportVideoResult> {
     const { projectName, onProgress, signal } = options;
     const playerStore = usePlayerState();
@@ -166,44 +223,26 @@ export async function exportProjectToVideo(ffmpeg: FFManager, options: ExportVid
         const frameDir = ffmpeg.pathConfig.exportPath;
 
         const yieldInterval = 16; // ms，约等于一帧
-        let lastYieldTime = performance.now();
+        const lastYieldTimeRef = { value: performance.now() };
 
-        for (let i = 0; i < totalFrames; i++) {
-            if (signal?.aborted) {
-                throw new Error('Export aborted');
+        await renderFramesRange(
+            ctx,
+            canvas,
+            bgColor,
+            trackStore.trackList as unknown as TrackLineItem[],
+            attrStore.trackAttrMap,
+            ffmpeg,
+            frameDir,
+            {
+                startFrame: 0,
+                endFrame: totalFrames,
+                signal,
+                onProgress,
+                totalFrames,
+                yieldInterval,
+                lastYieldTimeRef
             }
-            const now = performance.now();
-            if (now - lastYieldTime > yieldInterval) {
-                await new Promise(resolve => setTimeout(resolve, 0));
-                lastYieldTime = performance.now();
-            }
-            const frameIndex = i;
-            ctx.fillStyle = bgColor;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            const activeTracks = collectActiveTracks(frameIndex, trackStore.trackList as unknown as TrackLineItem[]);
-            const videoTracks = activeTracks.filter(item => isVideo(item.type));
-            const otherTracks = activeTracks.filter(item => !isVideo(item.type));
-
-            for (const trackItem of videoTracks) {
-                await drawTrackItem(ctx, { width: canvas.width, height: canvas.height }, trackItem, attrStore.trackAttrMap, ffmpeg, frameIndex);
-            }
-            for (const trackItem of otherTracks) {
-                await drawTrackItem(ctx, { width: canvas.width, height: canvas.height }, trackItem, attrStore.trackAttrMap, ffmpeg, frameIndex);
-            }
-
-            const blob = await canvasToPngBlob(canvas);
-            const fileIndex = i + 1;
-            const fileName = `frame-${String(fileIndex).padStart(6, '0')}.png`;
-            await ffmpeg.writeFrameImage(frameDir, fileName, blob);
-
-            onProgress && onProgress({
-                phase: 'render-frames',
-                progress: (i + 1) / totalFrames,
-                currentFrame: i + 1,
-                totalFrames
-            });
-        }
+        );
 
         onProgress && onProgress({ phase: 'merge-video', progress: 0, totalFrames, currentFrame: totalFrames });
 
