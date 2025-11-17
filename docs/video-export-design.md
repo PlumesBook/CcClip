@@ -1,6 +1,6 @@
 # 离线帧渲染 + 视频导出设计文档
 
-> 版本：v0.1（仅设计，不含实现）  
+> 版本：v0.1（设计 + 实现说明：阶段 1-3 已完成，阶段 4 暂未实施）  
 > 范围：基于当前 CcClip 架构，在浏览器端完成离线帧渲染与 mp4 视频导出。
 
 ---
@@ -344,3 +344,32 @@ class FFManager {
   - 文档给出的接口和模块划分，应是后续多轮优化（性能、画质、编码参数）的基础，不需要大改架构。
 
 > 后续所有离线帧渲染 + mp4 导出开发，以本设计文档为基线执行。如有与现实现状不符的地方，优先更新本设计文档，再调整实现。
+
+---
+
+## 9. 实施状态与实现差异
+
+### 9.1 阶段完成情况
+
+- 阶段 1：最小可用版本（无音频纯画面导出）
+  - 已实现。当前导出管线会先完成全工程离线帧渲染，并基于帧序列合成无声 mp4。
+- 阶段 2：接入音频
+  - 已实现。导出前通过 `ffmpeg.getAudio(playerStore.audioPlayData, trackAttrMap)` 合成 `/audio/audio.mp3`，再通过 `muxAudioVideo` 将无声视频与音频合并为最终 mp4。
+- 阶段 3：UI 与用户体验
+  - 已实现。Header 导出按钮接入 `exportProjectToVideo`，并通过进度弹窗（圆形进度 + 当前阶段文案 + 取消按钮）展示导出状态，支持 `AbortController` 取消导出。
+- 阶段 4：性能优化与高级特性
+  - 暂未实施。当前版本尚未引入并发抽帧、分段导出或断点续导等优化，仅在 Demo 级工程下验证体验。
+
+### 9.2 与设计稿的实现差异（v0.1）
+
+- Canvas 离线渲染方式：
+  - 设计稿建议复用 `CanvasPlayer` 并提供 `renderFrame(frameIndex)` 接口；
+  - 当前实现中，离线导出使用独立的隐藏 `canvas` 与渲染逻辑，直接基于 `trackList + trackAttrMap` 和 ffmpeg 帧访问接口（`getFrame / getGifFrame`）按帧绘制，以避免与实时预览共享内部状态。
+- 导出服务抽象：
+  - 已按照 4.1 新增 `src/services/exportVideo.ts`，对外提供 `exportProjectToVideo(options)`，内部负责帧渲染、音频合成、视频合成与音视频 mux，并通过 `onProgress + AbortSignal` 暴露进度与取消能力。
+  - 额外抽象了 `useVideoExport`（`src/services/useVideoExport.ts`），将导出进度、阶段文案与下载触发统一封装，UI 组件（如 Header）只需调用 `startExport / cancelExport` 并绑定状态即可。
+- UI 形态：
+  - 设计稿中仅要求“简单进度与取消能力”（如 Message/顶部进度条）；
+  - 当前实现采用居中的模态对话框 + 圆形进度条 + 阶段提示 + 取消按钮的形式，整体风格接近常见导出弹窗，但文案与表现以本项目为主，不依赖外部产品。
+
+上述差异均保持在实现细节层面，没有改变本设计文档在目标（忠实导出时间轴画面与音频）、模块划分和演进方向上的约束。
