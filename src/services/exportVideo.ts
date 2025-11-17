@@ -142,92 +142,94 @@ export async function exportProjectToVideo(ffmpeg: FFManager, options: ExportVid
 
     onProgress && onProgress({ phase: 'prepare', progress: 0, totalFrames, currentFrame: 0 });
 
-    // 阶段 2：音频合成（如果存在可用音轨）
-    const hasAudio = playerStore.audioPlayData && playerStore.audioPlayData.length > 0;
-    let audioFsPath: string | null = null;
-    if (hasAudio) {
-        onProgress && onProgress({ phase: 'merge-audio', progress: 0, totalFrames, currentFrame: 0 });
-        await ffmpeg.getAudio(playerStore.audioPlayData, toRaw(attrStore.trackAttrMap));
-        // getAudio 内部总是输出到 /audio/audio.mp3
-        audioFsPath = `${ffmpeg.pathConfig.audioPath}audio.mp3`;
-        onProgress && onProgress({ phase: 'merge-audio', progress: 1, totalFrames, currentFrame: 0 });
-    }
-
-    const canvas = document.createElement('canvas');
-    canvas.width = playerWidth;
-    canvas.height = playerHeight;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-        throw new Error('Canvas 2D context is not available');
-    }
-    const bgColor = '#111827';
-
-    const frameDir = ffmpeg.pathConfig.exportPath;
-
-    const yieldInterval = 16; // ms，约等于一帧
-    let lastYieldTime = performance.now();
-
-    for (let i = 0; i < totalFrames; i++) {
-        if (signal?.aborted) {
-            throw new Error('Export aborted');
-        }
-        const now = performance.now();
-        if (now - lastYieldTime > yieldInterval) {
-            await new Promise(resolve => setTimeout(resolve, 0));
-            lastYieldTime = performance.now();
-        }
-        const frameIndex = i;
-        ctx.fillStyle = bgColor;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        const activeTracks = collectActiveTracks(frameIndex, trackStore.trackList as unknown as TrackLineItem[]);
-        const videoTracks = activeTracks.filter(item => isVideo(item.type));
-        const otherTracks = activeTracks.filter(item => !isVideo(item.type));
-
-        for (const trackItem of videoTracks) {
-            await drawTrackItem(ctx, { width: canvas.width, height: canvas.height }, trackItem, attrStore.trackAttrMap, ffmpeg, frameIndex);
-        }
-        for (const trackItem of otherTracks) {
-            await drawTrackItem(ctx, { width: canvas.width, height: canvas.height }, trackItem, attrStore.trackAttrMap, ffmpeg, frameIndex);
+    try {
+        // 阶段 2：音频合成（如果存在可用音轨）
+        const hasAudio = playerStore.audioPlayData && playerStore.audioPlayData.length > 0;
+        let audioFsPath: string | null = null;
+        if (hasAudio) {
+            onProgress && onProgress({ phase: 'merge-audio', progress: 0, totalFrames, currentFrame: 0 });
+            await ffmpeg.getAudio(playerStore.audioPlayData, toRaw(attrStore.trackAttrMap));
+            // getAudio 内部总是输出到 /audio/audio.mp3
+            audioFsPath = `${ffmpeg.pathConfig.audioPath}audio.mp3`;
+            onProgress && onProgress({ phase: 'merge-audio', progress: 1, totalFrames, currentFrame: 0 });
         }
 
-        const blob = await canvasToPngBlob(canvas);
-        const fileIndex = i + 1;
-        const fileName = `frame-${String(fileIndex).padStart(6, '0')}.png`;
-        await ffmpeg.writeFrameImage(frameDir, fileName, blob);
+        const canvas = document.createElement('canvas');
+        canvas.width = playerWidth;
+        canvas.height = playerHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            throw new Error('Canvas 2D context is not available');
+        }
+        const bgColor = '#111827';
 
-        onProgress && onProgress({
-            phase: 'render-frames',
-            progress: (i + 1) / totalFrames,
-            currentFrame: i + 1,
-            totalFrames
-        });
+        const frameDir = ffmpeg.pathConfig.exportPath;
+
+        const yieldInterval = 16; // ms，约等于一帧
+        let lastYieldTime = performance.now();
+
+        for (let i = 0; i < totalFrames; i++) {
+            if (signal?.aborted) {
+                throw new Error('Export aborted');
+            }
+            const now = performance.now();
+            if (now - lastYieldTime > yieldInterval) {
+                await new Promise(resolve => setTimeout(resolve, 0));
+                lastYieldTime = performance.now();
+            }
+            const frameIndex = i;
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const activeTracks = collectActiveTracks(frameIndex, trackStore.trackList as unknown as TrackLineItem[]);
+            const videoTracks = activeTracks.filter(item => isVideo(item.type));
+            const otherTracks = activeTracks.filter(item => !isVideo(item.type));
+
+            for (const trackItem of videoTracks) {
+                await drawTrackItem(ctx, { width: canvas.width, height: canvas.height }, trackItem, attrStore.trackAttrMap, ffmpeg, frameIndex);
+            }
+            for (const trackItem of otherTracks) {
+                await drawTrackItem(ctx, { width: canvas.width, height: canvas.height }, trackItem, attrStore.trackAttrMap, ffmpeg, frameIndex);
+            }
+
+            const blob = await canvasToPngBlob(canvas);
+            const fileIndex = i + 1;
+            const fileName = `frame-${String(fileIndex).padStart(6, '0')}.png`;
+            await ffmpeg.writeFrameImage(frameDir, fileName, blob);
+
+            onProgress && onProgress({
+                phase: 'render-frames',
+                progress: (i + 1) / totalFrames,
+                currentFrame: i + 1,
+                totalFrames
+            });
+        }
+
+        onProgress && onProgress({ phase: 'merge-video', progress: 0, totalFrames, currentFrame: totalFrames });
+
+        const { videoPath } = await ffmpeg.mergeVideoFromFrames(frameDir, fps, 'video.mp4');
+
+        // 如存在音频轨，则进一步进行音视频合成
+        let finalVideoPath = videoPath;
+        if (audioFsPath) {
+            const outputPath = `${ffmpeg.pathConfig.exportPath}output.mp4`;
+            await ffmpeg.muxAudioVideo(videoPath, audioFsPath, outputPath);
+            finalVideoPath = outputPath;
+        }
+
+        const blob = ffmpeg.getFileBlobByPath(finalVideoPath, 'video/mp4');
+
+        onProgress && onProgress({ phase: 'done', progress: 1, totalFrames, currentFrame: totalFrames });
+
+        const fileName = formatExportFileName(projectName);
+        return {
+            fileName,
+            blob
+        };
+    } finally {
+        // 清理导出过程中生成的临时帧文件
+        if (typeof (ffmpeg as any).clearExportFrames === 'function') {
+            (ffmpeg as any).clearExportFrames();
+        }
     }
-
-    onProgress && onProgress({ phase: 'merge-video', progress: 0, totalFrames, currentFrame: totalFrames });
-
-    const { videoPath } = await ffmpeg.mergeVideoFromFrames(frameDir, fps, 'video.mp4');
-
-    // 如存在音频轨，则进一步进行音视频合成
-    let finalVideoPath = videoPath;
-    if (audioFsPath) {
-        const outputPath = `${ffmpeg.pathConfig.exportPath}output.mp4`;
-        await ffmpeg.muxAudioVideo(videoPath, audioFsPath, outputPath);
-        finalVideoPath = outputPath;
-    }
-
-    const blob = ffmpeg.getFileBlobByPath(finalVideoPath, 'video/mp4');
-
-    // 清理导出过程中生成的临时帧文件
-    if (typeof (ffmpeg as any).clearExportFrames === 'function') {
-        (ffmpeg as any).clearExportFrames();
-    }
-
-    onProgress && onProgress({ phase: 'done', progress: 1, totalFrames, currentFrame: totalFrames });
-
-    const fileName = formatExportFileName(projectName);
-    return {
-        fileName,
-        blob
-    };
 }

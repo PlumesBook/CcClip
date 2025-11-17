@@ -3,6 +3,7 @@ import { usePageState } from '@/stores/pageState';
 import { usePlayerState } from '@/stores/playerState';
 import type FFManager from '@/utils/ffmpegManager';
 import { exportProjectToVideo } from '@/services/exportVideo';
+import { ElMessage } from 'element-plus';
 
 export type ExportPhase = 'prepare' | 'merge-audio' | 'render-frames' | 'merge-video' | 'done';
 
@@ -78,6 +79,7 @@ export function useVideoExport() {
         } catch (e: any) {
             if (!e || e.message !== 'Export aborted') {
                 console.error(e);
+                ElMessage.error('导出失败，请稍后重试');
             }
         } finally {
             exporting.value = false;
