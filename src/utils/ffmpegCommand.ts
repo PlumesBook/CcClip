@@ -114,6 +114,23 @@ export class Command { // 命令封装
             outputPath
         };
     }
+    /**
+     * 多段 mp4 拼接（使用 concat demuxer）
+     * @param listFilePath concat 列表文件路径
+     * @param outputPath   输出视频路径
+     */
+    concatVideos(listFilePath: string, outputPath: string) {
+        return {
+            commands: [
+                '-f', 'concat',
+                '-safe', '0',
+                '-i', listFilePath,
+                '-c', 'copy',
+                outputPath
+            ],
+            outputPath
+        };
+    }
     static genVideoAAC(path: string, videoName: string) {
         return `${path}${videoName}_A.aac`;
     }

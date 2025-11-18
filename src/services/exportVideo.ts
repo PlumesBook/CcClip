@@ -160,14 +160,14 @@ async function renderFramesRange(
         }
 
         const blob = await canvasToPngBlob(canvas);
-        const fileIndex = frameIndex + 1;
+        const fileIndex = (frameIndex - startFrame) + 1;
         const fileName = `frame-${String(fileIndex).padStart(6, '0')}.png`;
         await ffmpeg.writeFrameImage(frameDir, fileName, blob);
 
         onProgress && onProgress({
             phase: 'render-frames',
-            progress: fileIndex / totalFrames,
-            currentFrame: fileIndex,
+            progress: (frameIndex + 1) / totalFrames,
+            currentFrame: frameIndex + 1,
             totalFrames
         });
     }
@@ -199,6 +199,8 @@ export async function exportProjectToVideo(ffmpeg: FFManager, options: ExportVid
 
     onProgress && onProgress({ phase: 'prepare', progress: 0, totalFrames, currentFrame: 0 });
 
+    let exportSucceeded = false;
+
     try {
         // 阶段 2：音频合成（如果存在可用音轨）
         const hasAudio = playerStore.audioPlayData && playerStore.audioPlayData.length > 0;
@@ -225,34 +227,88 @@ export async function exportProjectToVideo(ffmpeg: FFManager, options: ExportVid
         const yieldInterval = 16; // ms，约等于一帧
         const lastYieldTimeRef = { value: performance.now() };
 
-        await renderFramesRange(
-            ctx,
-            canvas,
-            bgColor,
-            trackStore.trackList as unknown as TrackLineItem[],
-            attrStore.trackAttrMap,
-            ffmpeg,
-            frameDir,
-            {
-                startFrame: 0,
-                endFrame: totalFrames,
-                signal,
-                onProgress,
-                totalFrames,
-                yieldInterval,
-                lastYieldTimeRef
+        const segmentFrameLimit = 600;
+        const useSegmentedExport = totalFrames > segmentFrameLimit;
+
+        let mergedVideoPath: string;
+
+        if (!useSegmentedExport) {
+            await renderFramesRange(
+                ctx,
+                canvas,
+                bgColor,
+                trackStore.trackList as unknown as TrackLineItem[],
+                attrStore.trackAttrMap,
+                ffmpeg,
+                frameDir,
+                {
+                    startFrame: 0,
+                    endFrame: totalFrames,
+                    signal,
+                    onProgress,
+                    totalFrames,
+                    yieldInterval,
+                    lastYieldTimeRef
+                }
+            );
+
+            onProgress && onProgress({ phase: 'merge-video', progress: 0, totalFrames, currentFrame: totalFrames });
+
+            const { videoPath } = await ffmpeg.mergeVideoFromFrames(frameDir, fps, 'video.mp4');
+            mergedVideoPath = videoPath;
+        } else {
+            const segmentSize = segmentFrameLimit;
+            const segmentVideoPaths: string[] = [];
+
+            for (let startFrame = 0, segmentIndex = 0; startFrame < totalFrames; startFrame += segmentSize, segmentIndex++) {
+                const endFrame = Math.min(totalFrames, startFrame + segmentSize);
+
+                await renderFramesRange(
+                    ctx,
+                    canvas,
+                    bgColor,
+                    trackStore.trackList as unknown as TrackLineItem[],
+                    attrStore.trackAttrMap,
+                    ffmpeg,
+                    frameDir,
+                    {
+                        startFrame,
+                        endFrame,
+                        signal,
+                        onProgress,
+                        totalFrames,
+                        yieldInterval,
+                        lastYieldTimeRef
+                    }
+                );
+
+                const segmentName = `segment-${segmentIndex + 1}.mp4`;
+                const { videoPath } = await ffmpeg.mergeVideoFromFrames(frameDir, fps, segmentName);
+                segmentVideoPaths.push(videoPath);
+
+                if (typeof (ffmpeg as any).clearExportFrames === 'function') {
+                    (ffmpeg as any).clearExportFrames();
+                }
             }
-        );
 
-        onProgress && onProgress({ phase: 'merge-video', progress: 0, totalFrames, currentFrame: totalFrames });
+            const listFilePath = `${frameDir}segments.txt`;
+            const listContent = segmentVideoPaths.map(path => `file '${path}'`).join('\n');
+            const encoder = new TextEncoder();
+            const listData = encoder.encode(listContent);
+            (ffmpeg as any).getIns().FS('writeFile', listFilePath, listData);
 
-        const { videoPath } = await ffmpeg.mergeVideoFromFrames(frameDir, fps, 'video.mp4');
+            onProgress && onProgress({ phase: 'merge-video', progress: 0, totalFrames, currentFrame: totalFrames });
+
+            const concatOutputPath = `${frameDir}video_concat.mp4`;
+            await ffmpeg.concatVideos(listFilePath, concatOutputPath);
+            mergedVideoPath = concatOutputPath;
+        }
 
         // 如存在音频轨，则进一步进行音视频合成
-        let finalVideoPath = videoPath;
+        let finalVideoPath = mergedVideoPath;
         if (audioFsPath) {
             const outputPath = `${ffmpeg.pathConfig.exportPath}output.mp4`;
-            await ffmpeg.muxAudioVideo(videoPath, audioFsPath, outputPath);
+            await ffmpeg.muxAudioVideo(mergedVideoPath, audioFsPath, outputPath);
             finalVideoPath = outputPath;
         }
 
@@ -261,14 +317,20 @@ export async function exportProjectToVideo(ffmpeg: FFManager, options: ExportVid
         onProgress && onProgress({ phase: 'done', progress: 1, totalFrames, currentFrame: totalFrames });
 
         const fileName = formatExportFileName(projectName);
-        return {
+        const result: ExportVideoResult = {
             fileName,
             blob
         };
+        exportSucceeded = true;
+        return result;
     } finally {
         // 清理导出过程中生成的临时帧文件
         if (typeof (ffmpeg as any).clearExportFrames === 'function') {
             (ffmpeg as any).clearExportFrames();
+        }
+        // 仅在导出成功时清理分段视频及列表文件，失败/取消时保留用于调试
+        if (exportSucceeded && typeof (ffmpeg as any).clearExportSegments === 'function') {
+            (ffmpeg as any).clearExportSegments();
         }
     }
 }

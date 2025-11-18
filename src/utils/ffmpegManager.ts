@@ -202,6 +202,21 @@ class FFManager {
             }
         });
     }
+    // 清理导出目录中的分段视频及列表文件
+    clearExportSegments() {
+        const dirList = this.readDir(this.pathConfig.exportPath) || [];
+        dirList.forEach((name: string) => {
+            if (name === '.' || name === '..') return;
+            if (name.startsWith('segment-') && name.endsWith('.mp4')) {
+                const filePath = `${this.pathConfig.exportPath}${name}`;
+                this.rmFile(filePath);
+            }
+            if (name === 'segments.txt') {
+                const filePath = `${this.pathConfig.exportPath}${name}`;
+                this.rmFile(filePath);
+            }
+        });
+    }
     // 执行钩子
     runHook(type: keyof typeof FFManager.Hooks) {
         return FFManager.Hooks[type] && FFManager.Hooks[type](this);
@@ -229,6 +244,14 @@ class FFManager {
      */
     async muxAudioVideo(videoPath: string, audioPath: string, outputPath: string) {
         const { commands } = this.baseCommand.muxAudioVideo(videoPath, audioPath, outputPath);
+        await this.run(commands);
+        return { outputPath };
+    }
+    /**
+     * 多段无声 mp4 拼接成一个输出文件
+     */
+    async concatVideos(listFilePath: string, outputPath: string) {
+        const { commands } = this.baseCommand.concatVideos(listFilePath, outputPath);
         await this.run(commands);
         return { outputPath };
     }
