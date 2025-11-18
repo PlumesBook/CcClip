@@ -6,22 +6,22 @@
         </div>
         <div v-if="showUploadArea" class="mb-2 px-2">
             <div
-class="flex items-center justify-center h-16 border-2 border-dashed rounded-md cursor-pointer dark:border-gray-600 border-gray-300 hover:dark:border-blue-400 hover:border-blue-400 text-xs text-gray-500 dark:text-gray-300 select-none"
+            class="flex items-center justify-center h-16 border-2 border-dashed rounded-md cursor-pointer dark:border-gray-600 border-gray-300 hover:dark:border-blue-400 hover:border-blue-400 text-xs text-gray-500 dark:text-gray-300 select-none"
                 @click="triggerSelect" @dragover.prevent @drop.prevent="handleDrop"
->
-                <VideoIcon class="text-base mr-2" />
-                <span>点击或拖拽视频到此处，添加到「用户上传」</span>
+            >
+                <component :is="uploadIcon" class="text-base mr-2" />
+                <span>{{ uploadHint }}</span>
             </div>
             <input
-ref="fileInput" class="hidden" type="file" multiple accept="video/*"
-@change="handleFileChange"
->
+            ref="fileInput" class="hidden" type="file" multiple :accept="acceptTypes"
+            @change="handleFileChange"
+            >
         </div>
         <ul class="flex flex-row flex-wrap">
             <li
-class="flex flex-col mb-2 p-1.5" :class="{ 'w-full': isAudio }" v-for="(item, idnex) of listData.items"
+            class="flex flex-col mb-2 p-1.5" :class="{ 'w-full': isAudio }" v-for="(item, idnex) of listData.items"
                 :key="`${item.name}${item.cover}${idnex}`"
->
+            >
                 <template v-if="isAudio">
                     <AudioResourceItem :data="item" :type="type" />
                 </template>
@@ -38,6 +38,8 @@ class="flex flex-col mb-2 p-1.5" :class="{ 'w-full': isAudio }" v-for="(item, id
   import AudioResourceItem from '@/components/item/resourcesItem/AudioResourceItem.vue';
   import OtherResource from '@/components/item/resourcesItem/OtherResource.vue';
   import VideoIcon from '@/components/icons/VideoIcon.vue';
+  import AudioIcon from '@/components/icons/AudioIcon.vue';
+  import ImageIcon from '@/components/icons/ImageIcon.vue';
   const props = defineProps({
     listData: {
       type: Object,
@@ -60,8 +62,35 @@ class="flex flex-col mb-2 p-1.5" :class="{ 'w-full': isAudio }" v-for="(item, id
   });
   const listData = ref(props.listData);
   const isAudio = computed(() => props.type === 'audio');
-  const showUploadArea = computed(() => props.type === 'video' && (props.listData as any)?.title === '用户上传');
+  const showUploadArea = computed(() => ['video', 'audio', 'image'].includes(props.type) && (props.listData as any)?.title === '用户上传');
   const fileInput = ref<HTMLInputElement | null>(null);
+  const acceptTypes = computed(() => {
+    if (props.type === 'audio') {
+      return 'audio/*';
+    }
+    if (props.type === 'image') {
+      return 'image/gif';
+    }
+    return 'video/*';
+  });
+  const uploadHint = computed(() => {
+    if (props.type === 'audio') {
+      return '点击或拖拽音频到此处，添加到「用户上传」';
+    }
+    if (props.type === 'image') {
+      return '点击或拖拽图片到此处，添加到「用户上传」';
+    }
+    return '点击或拖拽视频到此处，添加到「用户上传」';
+  });
+  const uploadIcon = computed(() => {
+    if (props.type === 'audio') {
+      return AudioIcon;
+    }
+    if (props.type === 'image') {
+      return ImageIcon;
+    }
+    return VideoIcon;
+  });
 
   function triggerSelect() {
     if (fileInput.value) {
@@ -88,8 +117,16 @@ class="flex flex-col mb-2 p-1.5" :class="{ 'w-full': isAudio }" v-for="(item, id
 
   function handleFiles(files: FileList) {
     Array.from(files).forEach(file => {
-      if (!file.type.startsWith('video/')) return;
-      createVideoResourceFromFile(file);
+      if (props.type === 'video') {
+        if (!file.type.startsWith('video/')) return;
+        createVideoResourceFromFile(file);
+      } else if (props.type === 'audio') {
+        if (!file.type.startsWith('audio/')) return;
+        createAudioResourceFromFile(file);
+      } else if (props.type === 'image') {
+        if (file.type !== 'image/gif') return;
+        createImageResourceFromFile(file);
+      }
     });
   }
 
@@ -147,6 +184,69 @@ class="flex flex-col mb-2 p-1.5" :class="{ 'w-full': isAudio }" v-for="(item, id
         emitItem('');
       }
     };
+  }
+
+  function createAudioResourceFromFile(file: File) {
+    const url = URL.createObjectURL(file);
+    const audio = document.createElement('audio');
+    audio.preload = 'metadata';
+    audio.src = url;
+    audio.onloadedmetadata = () => {
+      const duration = audio.duration || 0;
+      const time = Math.max(1, Math.round(duration * 1000));
+      const baseName = getBaseName(file.name);
+      const format = getFormat(file.name);
+      const emitItem = () => {
+        emit('upload', {
+          name: baseName,
+          format,
+          cover: '',
+          source: url,
+          width: 0,
+          height: 0,
+          fps: 0,
+          frameCount: 0,
+          time,
+          file,
+          groupType: props.type,
+          groupTitle: (props.listData as any)?.title
+        });
+      };
+      emitItem();
+    };
+  }
+
+  function createImageResourceFromFile(file: File) {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      const width = image.width || 320;
+      const height = image.height || 180;
+      const fps = 30;
+      const time = 3000;
+      const frameCount = Math.max(1, Math.round(time * fps / 1000));
+      const baseName = getBaseName(file.name);
+      const format = getFormat(file.name);
+      const emitItem = () => {
+        emit('upload', {
+          name: baseName,
+          format,
+          cover: url,
+          source: url,
+          width,
+          height,
+          fps,
+          frameCount,
+          time,
+          sourceFrame: 1,
+          file,
+          groupType: props.type,
+          groupTitle: (props.listData as any)?.title
+        });
+      };
+      emitItem();
+    };
+    image.src = url;
   }
 
   function getBaseName(fileName: string) {

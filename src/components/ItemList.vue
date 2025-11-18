@@ -59,7 +59,7 @@ class="flex flex-col transition-all duration-200 overflow-x-hidden border-r dark
     });
     trackStore.trackList.forEach(line => {
       line.list.forEach((item: any) => {
-        if (item.type !== 'video') return;
+        if (!['video', 'audio', 'image'].includes(item.type)) return;
         const uploadId = item.uploadId as string | undefined;
         if (!uploadId) return;
         const record = uploadMap.get(uploadId);
@@ -70,11 +70,19 @@ class="flex flex-col transition-all duration-200 overflow-x-hidden border-r dark
           urlMap.set(record.id, source);
         }
         item.source = source;
-        item.width = record.width;
-        item.height = record.height;
+        item.format = record.format;
         item.time = record.time;
-        item.frameCount = record.frameCount;
-        item.cover = record.cover;
+        if (item.type === 'video') {
+          item.frameCount = record.frameCount;
+          item.width = record.width;
+          item.height = record.height;
+          item.cover = record.cover;
+        } else if (item.type === 'image') {
+          item.width = record.width;
+          item.height = record.height;
+          item.cover = record.cover;
+          item.sourceFrame = record.sourceFrame || item.sourceFrame || 1;
+        }
       });
     });
   }
@@ -106,6 +114,7 @@ class="flex flex-col transition-all duration-200 overflow-x-hidden border-r dark
         fps: record.fps,
         frameCount: record.frameCount,
         time: record.time,
+        sourceFrame: record.sourceFrame,
         uploadId: record.id
       });
     });
@@ -151,7 +160,8 @@ class="flex flex-col transition-all duration-200 overflow-x-hidden border-r dark
           fps: rest.fps,
           frameCount: rest.frameCount,
           time: rest.time,
-          file
+          file,
+          sourceFrame: rest.sourceFrame
         });
         insertItem.uploadId = id;
       } catch (e) {

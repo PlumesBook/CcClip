@@ -66,6 +66,11 @@ handler = (req, res) => {
   }else if(type === 'audio') {
     data = [
       {
+        title: '用户上传',
+        type: 'audio',
+        items: []
+      },
+      {
         title: '抖音',
         type: 'audio',
         items: [
@@ -174,6 +179,11 @@ handler = (req, res) => {
     ]
   }else if(type === 'image') {
     data = [
+      {
+        title: '用户上传',
+        type: 'image',
+        items: []
+      },
       {
         title: '热门',
         type: 'image',
