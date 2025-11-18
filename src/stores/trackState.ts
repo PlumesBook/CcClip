@@ -3,6 +3,7 @@ import { defineStore } from 'pinia';
 import { checkTrackListOverlap } from '@/utils/storeUtil';
 import { useTrackAttrState } from '@/stores/trackAttribute';
 import { getJsonParse } from '@/utils/common';
+import { getUploadResources, type UploadStoreRecord } from '@/utils/uploadStore';
 
 export type TrackType = 'video' | 'audio' | 'text' | 'image' | 'effect' | 'transition' | 'filter';
 interface BaseTractItem {
@@ -85,6 +86,77 @@ export const useTrackState = defineStore('trackState', () => {
   // 轨道放大比例
   const trackScale = ref(parseInt(localStorage.trackS || '60'));
   const trackList = reactive<TrackLineItem[]>(localStorage.trackList ? getJsonParse(localStorage.trackList) : []);
+
+  // 清理从 localStorage 恢复的上传资源临时字段，避免使用失效的 blob 链接
+  function resetUploadResourceUrlFromStorage() {
+    trackList.forEach(line => {
+      line.list.forEach((item: any) => {
+        if (!item) return;
+        if (['video', 'audio', 'image'].includes(item.type)) {
+          const isUpload = item.uploadId || (typeof item.source === 'string' && item.source.startsWith('blob:'));
+          if (isUpload) {
+            item.source = '';
+            if (item.type === 'image') {
+              item.cover = '';
+            }
+          }
+        }
+      });
+    });
+  }
+
+  async function restoreUploadResourceFromIndexedDB() {
+    const activeKeys: string[] = ['video', 'audio', 'image'];
+    const allUploads: UploadStoreRecord[] = [];
+    for (const key of activeKeys) {
+      try {
+        const list = await getUploadResources(key);
+        if (list && list.length) {
+          allUploads.push(...list);
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    if (!allUploads.length) return;
+    const uploadMap = new Map<string, UploadStoreRecord>();
+    const urlMap = new Map<string, string>();
+    allUploads.forEach(record => {
+      uploadMap.set(record.id, record);
+    });
+    trackList.forEach(line => {
+      line.list.forEach((item: any) => {
+        if (!['video', 'audio', 'image'].includes(item.type)) return;
+        const uploadId = item.uploadId as string | undefined;
+        if (!uploadId) return;
+        const record = uploadMap.get(uploadId);
+        if (!record) return;
+        let source = urlMap.get(record.id);
+        if (!source) {
+          source = URL.createObjectURL(record.file);
+          urlMap.set(record.id, source);
+        }
+        item.source = source;
+        item.format = record.format;
+        item.time = record.time;
+        if (item.type === 'video') {
+          item.frameCount = record.frameCount;
+          item.width = record.width;
+          item.height = record.height;
+          item.cover = record.cover;
+        } else if (item.type === 'image') {
+          item.width = record.width;
+          item.height = record.height;
+          const recordCover = record.cover || '';
+          item.cover = recordCover.startsWith('blob:') ? source : recordCover || source;
+          item.sourceFrame = record.sourceFrame || item.sourceFrame || 1;
+        }
+      });
+    });
+  }
+
+  resetUploadResourceUrlFromStorage();
+  restoreUploadResourceFromIndexedDB();
 
   // 选中元素坐标
   const selectTrackItem = reactive({

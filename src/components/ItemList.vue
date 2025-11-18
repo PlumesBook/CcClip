@@ -80,7 +80,8 @@ class="flex flex-col transition-all duration-200 overflow-x-hidden border-r dark
         } else if (item.type === 'image') {
           item.width = record.width;
           item.height = record.height;
-          item.cover = record.cover;
+          const recordCover = record.cover || '';
+          item.cover = recordCover.startsWith('blob:') ? source : recordCover || source;
           item.sourceFrame = record.sourceFrame || item.sourceFrame || 1;
         }
       });
@@ -104,10 +105,15 @@ class="flex flex-col transition-all duration-200 overflow-x-hidden border-r dark
         source = URL.createObjectURL(record.file);
         urlMap.set(record.id, source);
       }
+      const isImageGroup = record.groupType === 'image';
+      const recordCover = record.cover || '';
+      const cover = isImageGroup
+        ? (recordCover.startsWith('blob:') ? source : recordCover || source)
+        : recordCover;
       target.items.unshift({
         name: record.name,
         format: record.format,
-        cover: record.cover,
+        cover,
         source,
         width: record.width,
         height: record.height,
