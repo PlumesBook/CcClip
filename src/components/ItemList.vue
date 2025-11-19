@@ -82,7 +82,7 @@ class="flex flex-col transition-all duration-200 overflow-x-hidden border-r dark
           item.height = record.height;
           const recordCover = record.cover || '';
           item.cover = recordCover.startsWith('blob:') ? source : recordCover || source;
-          item.sourceFrame = record.sourceFrame || item.sourceFrame || 1;
+          item.sourceFrame = item.sourceFrame || record.sourceFrame || 1;
         }
       });
     });

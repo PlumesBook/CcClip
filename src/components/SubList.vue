@@ -222,9 +222,10 @@
     image.onload = () => {
       const width = image.width || 320;
       const height = image.height || 180;
-      const fps = 30;
-      const time = 3000;
-      const frameCount = Math.max(1, Math.round(time * fps / 1000));
+      // 图片轨道时长与接口图片保持一致，由 formatTrackItemData 统一按 time 计算 frameCount
+      const time = 2000;
+      const fps = 0;
+      const frameCount = 0;
       const baseName = getBaseName(file.name);
       const format = getFormat(file.name);
       const canvas = document.createElement('canvas');
