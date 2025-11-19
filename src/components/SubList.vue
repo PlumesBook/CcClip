@@ -34,12 +34,14 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed } from 'vue';
+  import { ref, computed, inject } from 'vue';
+  import type FFManager from '@/utils/ffmpegManager';
   import AudioResourceItem from '@/components/item/resourcesItem/AudioResourceItem.vue';
   import OtherResource from '@/components/item/resourcesItem/OtherResource.vue';
   import VideoIcon from '@/components/icons/VideoIcon.vue';
   import AudioIcon from '@/components/icons/AudioIcon.vue';
   import ImageIcon from '@/components/icons/ImageIcon.vue';
+  const ffmpeg = inject('ffmpeg') as FFManager;
   const props = defineProps({
     listData: {
       type: Object,
@@ -227,15 +229,39 @@
   function createImageResourceFromFile(file: File) {
     const url = URL.createObjectURL(file);
     const image = new Image();
-    image.onload = () => {
+    image.onload = async () => {
       const width = image.width || 320;
       const height = image.height || 180;
       // 图片轨道时长与接口图片保持一致，由 formatTrackItemData 统一按 time 计算 frameCount
-      const time = 2000;
-      const fps = 0;
-      const frameCount = 0;
+      let time = 2000;
+      let fps = 0;
+      let frameCount = 0;
       const baseName = getBaseName(file.name);
       const format = getFormat(file.name);
+      let sourceFrame = 1;
+
+      // 处理 GIF 动图
+      if (format.toLowerCase() === 'gif' && ffmpeg && ffmpeg.isLoaded.value) {
+        try {
+          const fileName = `${baseName}.${format}`;
+          await ffmpeg.writeFile(ffmpeg.pathConfig.resourcePath, fileName, url);
+          await ffmpeg.genFrame(baseName, format, { w: width, h: height });
+          // 读取帧目录
+          const frameDir = `${ffmpeg.pathConfig.framePath}${baseName}`;
+          const files = ffmpeg.readDir(frameDir);
+          // 过滤出 gif-x 格式的文件
+          const frames = files.filter((f: string) => f.startsWith('gif-'));
+          if (frames.length > 1) {
+            frameCount = frames.length;
+            sourceFrame = frames.length;
+            fps = 10; // GIF 默认 10fps
+            time = frameCount * 100; // 时长 = 帧数 * 100ms
+          }
+        } catch (e) {
+          console.error('GIF 解析失败', e);
+        }
+      }
+
       const canvas = document.createElement('canvas');
       canvas.width = width;
       canvas.height = height;
@@ -259,7 +285,7 @@
         fps,
         frameCount,
         time,
-        sourceFrame: 1,
+        sourceFrame,
         file,
         groupType: props.type,
         groupTitle: (props.listData as any)?.title
