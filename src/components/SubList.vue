@@ -1,12 +1,12 @@
 <template>
     <div class="w-full flex flex-col pt-2 pl-2 pr-1 mt-2">
         <div class="flex items-center justify-between pr-2">
-            <span class="mr-2 pl-2 mb-2 h-6 text-sm border-b dark:border-gray-600 border-gray-300 select-none"> {{
+            <span class="mr-2 pl-2 mb-2 h-6 text-sm font-medium text-cc-text-main border-b border-cc-border select-none"> {{
                 listData.title }} </span>
         </div>
         <div v-if="showUploadArea" class="mb-2 px-2">
             <div
-            class="flex items-center justify-center h-16 border-2 border-dashed rounded-md cursor-pointer dark:border-gray-600 border-gray-300 hover:dark:border-blue-400 hover:border-blue-400 text-xs text-gray-500 dark:text-gray-300 select-none"
+            class="flex items-center justify-center h-16 border border-dashed rounded-md cursor-pointer border-cc-border hover:border-cc-primary text-xs text-cc-text-sub select-none transition-colors"
                 @click="triggerSelect" @dragover.prevent @drop.prevent="handleDrop"
             >
                 <component :is="uploadIcon" class="text-base mr-2" />
@@ -17,28 +17,28 @@
             @change="handleFileChange"
             >
         </div>
-        <ul class="flex flex-row flex-wrap">
+        <ul class="flex flex-row flex-wrap gap-2 px-2">
             <!-- 上传占位 -->
             <li
-                class="flex flex-col mb-2 p-1.5 relative"
-                :class="{ 'w-full': isAudio, 'w-22': !isAudio, 'h-24': !isAudio }"
+                class="flex flex-col relative group cursor-pointer"
+                :class="{ 'w-full': isAudio, 'w-24': !isAudio, 'h-24': !isAudio }"
                 v-for="(item, index) in uploadingItems"
                 :key="`uploading-${index}`"
             >
                <div 
-                 class="relative w-full h-full border border-gray-300 dark:border-gray-600 rounded bg-gray-100 dark:bg-gray-800 flex flex-col items-center justify-center overflow-hidden"
-                 :class="{ 'h-20': isAudio, 'h-full': !isAudio }"
+                 class="relative w-full h-full border border-cc-border rounded bg-cc-surface flex flex-col items-center justify-center overflow-hidden"
+                 :class="{ 'h-14': isAudio, 'h-full': !isAudio }"
                >
-                  <component :is="uploadIcon" class="text-2xl text-gray-400 mb-1" />
-                  <span class="text-xs text-gray-500 px-2 truncate max-w-full">{{ item.name }}</span>
+                  <component :is="uploadIcon" class="text-2xl text-cc-text-sub mb-1" />
+                  <span class="text-xs text-cc-text-sub px-2 truncate max-w-full">{{ item.name }}</span>
                   <!-- 底部进度条 -->
-                  <div class="absolute bottom-0 left-0 w-full h-1 bg-gray-200 dark:bg-gray-700">
-                    <div class="h-full bg-blue-500 transition-all duration-300" :style="{ width: (item.progress || 0) + '%' }"></div>
+                  <div class="absolute bottom-0 left-0 w-full h-0.5 bg-cc-surface-light">
+                    <div class="h-full bg-cc-primary transition-all duration-300" :style="{ width: (item.progress || 0) + '%' }"></div>
                   </div>
                </div>
             </li>
             <li
-            class="flex flex-col mb-2 p-1.5" :class="{ 'w-full': isAudio }" v-for="(item, idnex) of listData.items"
+            class="flex flex-col" :class="{ 'w-full': isAudio }" v-for="(item, idnex) of listData.items"
                 :key="`${item.name}${item.cover}${idnex}`"
             >
                 <template v-if="isAudio">

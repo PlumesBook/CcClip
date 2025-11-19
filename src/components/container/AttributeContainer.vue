@@ -1,20 +1,20 @@
 <template>
   <div
-    class="select-none relative pl-2"
+    class="select-none relative pl-2 bg-cc-surface border-l border-cc-border"
     :style="attrWidth"
   >
     <SplitLine
-      class="top-0 left-0 bottom-0"
+      class="top-0 left-0 bottom-0 opacity-0 hover:opacity-100 transition-opacity"
       direction="vertical"
       :limitSize="limitSize"
       disabled
       v-model:newWidth="pageStore.attrWidth"
     />
-    <div v-show="selectTrackOptionsConfig.length === 0" class="w-full h-full flex flex-col justify-center items-center">
-      <AttrEmptyIcon />
-      <span class="text-sm">点击轨道进行编辑</span>
+    <div v-show="selectTrackOptionsConfig.length === 0" class="w-full h-full flex flex-col justify-center items-center text-cc-text-sub">
+      <AttrEmptyIcon class="text-4xl mb-4 opacity-50" />
+      <span class="text-sm font-medium">点击轨道进行编辑</span>
     </div>
-    <div v-if="selectTrackOptionsConfig.length > 0" class="absolute top-0 left-3 right-2 bottom-0 overflow-hidden">
+    <div v-if="selectTrackOptionsConfig.length > 0" class="absolute top-0 left-3 right-2 bottom-0 overflow-y-auto custom-scrollbar">
       <AttrContainer :attrData="selectTrackOptionsConfig" :trackId="trackStore.selectResource?.id" />
     </div>
   </div>
@@ -38,7 +38,8 @@
   }
 
   const selectTrackOptionsConfig = computed(() => {
-    const optionsConfig = trackStore.selectResource && TrackOptionsConfig[trackStore.selectResource.type];
+    if (!trackStore.selectResource) return [];
+    const optionsConfig = TrackOptionsConfig[trackStore.selectResource.type];
     return optionsConfig ? optionsConfig.attributes : [];
   });
   const attrWidth = computed(() => ({

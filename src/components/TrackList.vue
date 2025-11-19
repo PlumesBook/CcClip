@@ -1,8 +1,8 @@
 <template>
-  <div class="trackList flex flex-1 flex-row w-full overflow-x-hidden overflow-y-auto relative">
+  <div class="trackList flex flex-1 flex-row w-full overflow-x-hidden overflow-y-auto relative bg-cc-bg custom-scrollbar">
     <TrackListIcon :listData="showTrackList" :offsetTop="startY" />
     <div
-        class="flex-1 overflow-x-scroll overflow-y-auto flex-col shrink-0 grow relative"
+        class="flex-1 overflow-x-scroll overflow-y-auto flex-col shrink-0 grow relative custom-scrollbar"
         ref="trackList"
         @scroll="handleScroll"
         @wheel="handleWheel"
@@ -12,7 +12,7 @@
         :start="startX"
         :scale="trackScale"
         :step="defaultFps"
-        :focusPosition="store.selectResource"
+        :focusPosition="store.selectResource || undefined"
         @selectFrame="handlerSelectFrame"
       />
       <div
@@ -23,9 +23,9 @@
         @drop="addTrack"
       >
         <template v-if="showTrackList.length === 0">
-          <div class="flex justify-center items-center h-24 m-auto w-2/3 dark:bg-gray-500 bg-gray-200  rounded-md text-sm border-dashed border-2 dark:border-gray-500 border-gray-200 hover:dark:border-blue-300 hover:border-blue-400">
-            <VideoIcon class="text-xl mr-4" />
-            将素材拖拽到这里，开始编辑你的大作吧~
+          <div class="flex flex-col justify-center items-center h-32 m-auto w-2/3 bg-cc-surface-light rounded-lg text-sm text-cc-text-sub border border-dashed border-cc-border hover:border-cc-primary transition-colors">
+            <VideoIcon class="text-3xl mb-2 opacity-50" />
+            <span>将素材拖拽到这里，开始编辑你的大作吧~</span>
           </div>
         </template>
         <div
@@ -51,7 +51,7 @@
         <TrackPlayPoint v-show="showTrackList.length !== 0" />
         <div
             v-show="showTrackList.length !== 0 && dropItemLeft !== 0"
-            class="z-30 w-px absolute -top-5 bottom-0 bg-yellow-300 dark:bg-yellow-300"
+            class="z-30 w-px absolute -top-5 bottom-0 bg-cc-primary shadow-[0_0_4px_rgba(0,229,255,0.5)]"
             :style="{ left: `${dropItemLeft}px` }"
         />
       </div>

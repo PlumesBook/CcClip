@@ -1,5 +1,5 @@
 <template>
-  <div class="flex h-full overflow-hidden relative">
+  <div class="flex h-full overflow-hidden relative bg-cc-bg">
     <MenuList :activeIndex="defaultActiveIndex" @activeChange="activeHandler" />
     <ItemList
       :activeKey="state.activeItem.key"
@@ -7,10 +7,18 @@
       :title="state.activeItem.title"
       @collapseChange="changeCollapse"
     />
-    <div class="absolute top-1/2 left-8" v-show="store.hideSubMenu">
-      <ElIcon :size="16" class="cursor-pointer p-2 box-content" @click="switchCollapse">
-        <Expand />
-      </ElIcon>
+    <div 
+      v-show="store.hideSubMenu"
+      class="absolute top-4 left-[4.5rem] z-10"
+    >
+      <div 
+        class="bg-cc-surface-light border border-cc-border rounded p-1.5 cursor-pointer hover:bg-cc-border transition-colors shadow-sm"
+        @click="switchCollapse"
+      >
+        <ElIcon :size="16" color="#fff">
+          <Expand />
+        </ElIcon>
+      </div>
     </div>
   </div>
 </template>

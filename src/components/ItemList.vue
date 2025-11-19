@@ -1,16 +1,21 @@
 <template>
     <div
-class="flex flex-col transition-all duration-200 overflow-x-hidden border-r dark:border-gray-600 border-gray-300"
-        :class="collapse ? 'w-0' : 'w-80'"
->
-        <div class="min-h-full w-80 flex flex-col overflow-hidden border-l dark:border-gray-600 border-gray-300">
-            <div class="h-10 border-b dark:border-gray-600 border-gray-300">
-                <span class="inline leading-10 pl-3 select-none">{{ title }}</span>
-                <ElIcon :size="16" class="mr-3 mt-1 float-right cursor-pointer p-2 box-content" @click="switchCollapse">
-                    <Fold />
-                </ElIcon>
+        class="flex flex-col transition-all duration-300 ease-in-out overflow-x-hidden bg-cc-surface-light border-r border-cc-border"
+        :class="collapse ? 'w-0 opacity-0' : 'w-80 opacity-100'"
+    >
+        <div class="h-full w-80 flex flex-col overflow-hidden">
+            <div class="h-10 min-h-[40px] flex items-center justify-between px-3 border-b border-cc-border">
+                <span class="text-sm font-medium text-cc-text-main select-none">{{ title }}</span>
+                <div 
+                    class="p-1.5 rounded hover:bg-cc-surface cursor-pointer transition-colors"
+                    @click="switchCollapse"
+                >
+                    <ElIcon :size="14" class="text-cc-text-sub hover:text-cc-text-main">
+                        <Fold />
+                    </ElIcon>
+                </div>
             </div>
-            <div class="overflow-auto flex-1 pb-10">
+            <div class="overflow-y-auto flex-1 pb-4 custom-scrollbar">
                 <template v-for="(subData, index) of listData" :key="`${index}-${subData.type}`">
                     <SubList :type="subData.type" :listData="subData" @upload="handleUpload($event, index)" @delete="handleDelete($event, index)" />
                 </template>

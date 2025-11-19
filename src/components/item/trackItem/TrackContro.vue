@@ -1,28 +1,36 @@
 <template>
-  <div class="pl-4 pb-1 pr-10 w-full h-10 border-b dark:border-gray-600 border-gray-300">
+  <div class="px-4 h-10 flex items-center justify-between border-b border-cc-border bg-cc-surface">
     <div
-      class="float-left h-9 w-32 flex flex-row flex-nowrap items-center justify-around"
+      class="h-full flex items-center gap-4"
     >
       <div v-for="item of icons" :key="item.title" @click="handlerIcon(item)">
         <el-tooltip
           :disabled="item.disable"
-          class="bg-gray-400"
-          :effect="store.isDark ? 'dark' : 'light'"
+          effect="dark"
           :content="item.title"
-          placement="bottom-start"
+          placement="bottom"
+          :show-after="500"
         >
-          <component
-            :is="item.icon"
-            class="focus:outline-0"
-            :class="item.disable ? 'cursor-not-allowed text-gray-400' : ''"
-          />
+          <div 
+            class="p-1 rounded hover:bg-cc-surface-light transition-colors cursor-pointer"
+            :class="item.disable ? 'opacity-30 cursor-not-allowed' : 'opacity-80 hover:opacity-100'"
+          >
+            <component
+              :is="item.icon"
+              class="focus:outline-0 w-4 h-4 text-white"
+            />
+          </div>
         </el-tooltip>
       </div>
     </div>
-    <div class="float-right flex w-52 h-9 justify-center items-center">
-      <SubIcon :style="svgStyle" class="cursor-pointer mr-4" @click="changeScale(-10)" />
-      <el-slider v-model="modelValue" v-bind="sliderProps" />
-      <AddIcon :style="svgStyle" class="cursor-pointer ml-4" @click="changeScale(10)" />
+    <div class="flex items-center w-60 gap-3">
+      <SubIcon :style="svgStyle" class="cursor-pointer text-cc-text-sub hover:text-white transition-colors" @click="changeScale(-10)" />
+      <el-slider 
+        v-model="modelValue" 
+        v-bind="sliderProps" 
+        class="flex-1"
+      />
+      <AddIcon :style="svgStyle" class="cursor-pointer text-cc-text-sub hover:text-white transition-colors" @click="changeScale(10)" />
     </div>
   </div>
 </template>
@@ -64,7 +72,7 @@
   });
   const sliderProps = reactive({
     showTooltip: false,
-    size: 'small',
+    size: 'small' as 'small' | 'default' | 'large',
     step: 10,
     max: 100,
     min: 0

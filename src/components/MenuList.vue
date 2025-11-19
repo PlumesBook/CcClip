@@ -1,20 +1,21 @@
 <template>
-  <ul class="w-16 flex flex-col">
+  <ul class="w-16 flex flex-col bg-cc-surface border-r border-cc-border h-full py-2 gap-2">
     <li
       v-for="(item, index) of showMenuData" :key="item.key"
-      class="w-full flex flex-col items-center pt-2 pb-2 hover:border-indigo-400 hover:dark:bg-gray-700 hover:bg-gray-200 focus:outline-none"
-      :class="item.active ? 'border-b-2 dark:bg-gray-700 bg-gray-100 border-indigo-400' : 'border-b dark:bg-gray-800 bg-gray-50 dark:border-gray-600 border-gray-200'"
+      class="w-12 mx-auto flex flex-col items-center justify-center py-3 rounded-lg cursor-pointer transition-all duration-200 hover:bg-cc-surface-light group"
+      :class="item.active ? 'bg-cc-surface-light text-cc-primary' : 'text-cc-text-sub'"
       @click="activeChangeHandler(index)"
     >
       <ElIcon
-        :size="item.active ? defaultSize + 2 : defaultSize" :color="item.active ? activeColor : baseColor"
-        class="flex-auto"
+        :size="20"
+        class="transition-colors duration-200"
+        :class="item.active ? 'text-cc-primary' : 'text-cc-text-sub group-hover:text-cc-text-main'"
       >
         <component :is="item.icon" />
       </ElIcon>
       <span
-        class="mt-0.5 select-none"
-        :class="item.active ? 'text-sm dark:text-gray-50 text-gray-800' : 'text-xs dark:text-gray-300 text-gray-500'"
+        class="mt-1 select-none text-[10px] font-medium"
+        :class="item.active ? 'text-cc-primary' : 'text-cc-text-sub group-hover:text-cc-text-main'"
       >{{ item.title }}</span>
     </li>
   </ul>
@@ -42,14 +43,8 @@
     }
   });
   const store = usePageState();
-  const baseColor = computed(() => {
-    return store.isDark ? '#D1D5DB' : '#6B7280';
-  });
-  const activeColor = computed(() => {
-    return store.isDark ? '#F9FAFB' : '#1F2937';
-  });
+
   const activeIndex = ref(props.activeIndex);
-  const defaultSize = ref(props.defaultSize);
   const showMenuData = computed(() => {
     return menuData.map((item, index) => {
       item.active = index === activeIndex.value;

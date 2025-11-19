@@ -10,6 +10,16 @@ module.exports = {
       'full': '100%'
     },
     extend: {
+      colors: {
+        'cc-bg': '#121212',
+        'cc-surface': '#1D1D1F',
+        'cc-surface-light': '#252525',
+        'cc-border': '#333333',
+        'cc-primary': '#00E5FF',
+        'cc-primary-blue': '#3A7AF0',
+        'cc-text-main': 'rgba(255, 255, 255, 0.9)',
+        'cc-text-sub': 'rgba(255, 255, 255, 0.6)',
+      },
       cursor:{
         'r-resize': 'row-resize',
         'c-resize': 'col-resize',

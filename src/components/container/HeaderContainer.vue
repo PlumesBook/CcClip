@@ -1,27 +1,31 @@
 <template>
     <header
-        class="h-12 w-full flex flex-nowrap flex-row items-center justify-center border-b dark:border-gray-600 border-gray-300"
+        class="h-12 w-full flex flex-nowrap flex-row items-center justify-between px-4 bg-cc-surface border-b border-cc-border"
     >
-        <div class="flex w-1/3 pl-2 items-center">
-            <div class="w20">
-                <img class="h-8" :src="logoImage" alt="">
+        <div class="flex items-center">
+            <div class="w-8 h-8 flex items-center justify-center mr-3">
+                <img class="h-6 w-6" :src="logoImage" alt="logo">
             </div>
-            <span class="text-xs select-none ml-4">自动保存：2023-02-10 00:51</span>
+            <h2 class="text-sm font-medium text-cc-text-main select-none">
+                {{ store.pageTitle }}
+            </h2>
         </div>
-        <h2 class="align-middle w-1/5 text-center flex-1 select-none text-sm">
-            {{ store.pageTitle }}
-        </h2>
-        <div class="flex w-1/3 flex-row-reverse pr-10 items-center">
-            <ElButton color="#626aef" :disabled="!canExport" @click="handleExport">
-                <ElIcon :size="size" :color="color" class="mr-1">
-                    <Download />
-                </ElIcon>
-                导出
+
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-3 mr-4">
+                <!-- Placeholder for other tools or user info -->
+                <div class="w-8 h-8 rounded-full bg-cc-surface-light border border-cc-border flex items-center justify-center">
+                   <ElIcon :size="16" color="#8E8E8E"><User /></ElIcon>
+                </div>
+            </div>
+            <ElButton 
+                color="#3A7AF0" 
+                class="!border-none !text-white hover:!bg-blue-600 !h-8 !px-4 !rounded-md"
+                :disabled="!canExport" 
+                @click="handleExport"
+            >
+                <span class="text-xs font-medium">导出</span>
             </ElButton>
-            <el-switch
-                class="mr-10" size="large" :active-icon="Moon" :inactive-icon="Sunny" :inline-prompt="inner"
-                v-model="store.isDark" :style="switchClass"
-            />
         </div>
     </header>
     <ElDialog
@@ -55,18 +59,11 @@
 
 <script setup lang="ts">
     import logoImage from '@/assets/ccLogo.png';
-    import { ref, computed } from 'vue';
-    import { Download, Sunny, Moon } from '@element-plus/icons-vue';
+    import { ref } from 'vue';
+    import { User } from '@element-plus/icons-vue';
     import { usePageState } from '@/stores/pageState';
     import { useVideoExport } from '@/services/useVideoExport';
     const store = usePageState();
-    const size = ref(14);
-    const color = '#fff';
-    const inner = ref(true);
-    const switchClass = computed(() => ({
-        '--el-switch-border-color': store.isDark ? '#4B5563' : '#D1D5DB',
-        '--el-color-white': store.isDark ? '#F3F4F6' : '#374151'
-    }));
     const {
         canExport,
         showExportDialog,

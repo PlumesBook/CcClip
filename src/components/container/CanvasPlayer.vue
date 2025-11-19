@@ -1,7 +1,10 @@
 <template>
-  <div class="flex-1 overflow-hidden relative" ref="playerContent" @click="cancelSelect">
-    <span class="pl-2 inline-block w-full h-10 mb-2 leading-10 border-b dark:border-gray-600 border-gray-300">播放器</span>
-    <Player :containerSize="containerSize" />
+  <div class="flex-1 overflow-hidden relative bg-cc-bg flex flex-col" ref="playerContent" @click="cancelSelect">
+    <div class="h-10 flex items-center justify-center select-none pointer-events-none opacity-50">
+       <!-- Optional: Player Controls or Info could go here, keeping it empty for now or subtle title -->
+       <span class="text-xs text-cc-text-sub">视频预览</span>
+    </div>
+    <Player :containerSize="containerSize" class="flex-1" />
   </div>
 </template>
 

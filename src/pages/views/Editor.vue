@@ -2,8 +2,8 @@
   <HeaderContainer />
   <div class="flex flex-1 overflow-hidden">
     <ResourcesContainer />
-    <div class="flex flex-1 flex-col overflow-hidden">
-      <div class="flex flex-1 flex-row flex-nowrapf">
+    <div class="flex flex-1 flex-col overflow-hidden bg-cc-bg">
+      <div class="flex flex-1 flex-row flex-nowrap overflow-hidden">
         <CanvasPlayer />
         <AttributeContainer />
       </div>

@@ -1,7 +1,7 @@
 <template>
   <div
     class="mb-1 mt-1 relative ml-2"
-    :class="[TrackHeightMap.get(lineType), isActive ? 'dark:bg-gray-700 bg-gray-100 bg-opacity-20' : '', isMain ? 'bg-blue-500 bg-opacity-20' : '']"
+    :class="[TrackHeightMap.get(lineType), isActive ? 'bg-cc-surface-light bg-opacity-50 border border-cc-primary border-opacity-30 rounded' : '', isMain ? 'bg-opacity-10' : '']"
   >
     <template v-for="(item, index) of lineData" :key="item.id">
       <TrackItem

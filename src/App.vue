@@ -10,6 +10,6 @@
   import { reactive } from 'vue';
   const state = reactive({
     zIndex: 3000,
-    size: 'small'
+    size: 'small' as 'small' | 'default' | 'large'
   });
 </script>

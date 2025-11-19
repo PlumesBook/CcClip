@@ -1,6 +1,6 @@
 <template>
   <div
-    class="flex absolute justify-center items-center"
+    class="flex absolute justify-center items-center group"
     :class="[
         disabled ? 'cursor-no-drop' : isVertical ? 'cursor-c-resize' : 'cursor-r-resize',
         isVertical ? 'w-2 h-full flex-col' : 'h-2 w-full flex-row'
@@ -9,14 +9,14 @@
     @mousedown="mouseDownHandler"
   >
       <span
-        class="absolute flex z-10 dark:bg-gray-800 bg-gray-50 "
-        :class="isVertical ? 'h-8 w-4 flex-col' : 'w-8 h-4 flex-row'"
+        class="absolute flex z-10 bg-cc-surface border border-cc-border rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+        :class="isVertical ? 'h-8 w-4 flex-col justify-center items-center' : 'w-8 h-4 flex-row justify-center items-center'"
       >
-        <el-icon class="flex-auto" :class="isVertical ? 'rotate-90' : ''" :color="iconColor">
+        <el-icon :class="isVertical ? 'rotate-90' : ''" :color="iconColor" :size="12">
           <MoreFilled />
         </el-icon>
       </span>
-    <i class="block dark:bg-gray-600 bg-gray-300" :class="isVertical ? 'w-px h-full' : 'w-full h-px'" />
+    <i class="block bg-transparent group-hover:bg-cc-primary transition-colors delay-100" :class="isVertical ? 'w-px h-full' : 'w-full h-px'" />
   </div>
 </template>
 

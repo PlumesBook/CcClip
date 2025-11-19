@@ -1,10 +1,10 @@
 <template>
   <div
-    class="overflow-hidden select-none relative pt-2 flex flex-col"
+    class="overflow-hidden select-none relative flex flex-col bg-cc-bg border-t border-cc-border"
     :style="trackHeight"
   >
     <SplitLine
-      class="top-0 left-0 right-0"
+      class="top-0 left-0 right-0 z-20 opacity-0 hover:opacity-100 transition-opacity"
       direction="horizontal"
       :limitSize="limitSize"
       v-model:newHeight="page.trackHeight"
@@ -12,7 +12,7 @@
     <TrackContro
       v-model="store.trackScale"
     />
-    <TrackList />
+    <TrackList class="flex-1 bg-cc-bg" />
   </div>
 </template>
 
