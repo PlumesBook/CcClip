@@ -131,3 +131,24 @@ export async function getUploadResources(activeKey: string): Promise<UploadStore
     };
   });
 }
+
+export async function deleteUploadResource(id: string): Promise<void> {
+  const db = await openDB();
+  if (!db) {
+    return;
+  }
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const request = store.delete(id);
+    request.onsuccess = () => {
+      resolve();
+    };
+    request.onerror = () => {
+      reject(request.error);
+    };
+    tx.oncomplete = () => {
+      db.close();
+    };
+  });
+}

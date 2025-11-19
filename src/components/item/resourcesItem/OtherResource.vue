@@ -1,6 +1,6 @@
 <template>
   <div
-    class="inline-block relative w-22"
+    class="inline-block relative w-22 group"
     draggable="true"
     @dragstart="dragStart"
   >
@@ -15,6 +15,12 @@
     <label class="mt-1 mb-3 text-xs w-full text-center select-none dark:text-gray-400 text-gray-600" v-show="showData.showName">{{ formatData.name }}</label>
     <span class="h-5 absolute bottom-1 right-2 text-xs text-gray-400" v-show="showData.showTime">{{ formatTime(formatData.time).str }}</span>
     <div
+        v-if="closable"
+        class="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-10"
+    >
+      <el-button type="danger" :icon="Close" circle size="small" @click.stop="handleDelete" />
+    </div>
+    <div
         class="absolute top-16 right-1 bg-blue-500 rounded-full w-6 h-6 opacity-0 hover:opacity-100 transition-opacity duration-150"
         @click="addTrack"
     >
@@ -26,13 +32,15 @@
 </template>
 
 <script setup lang="ts">
-  import { Plus } from '@element-plus/icons-vue';
+  import { Plus, Close } from '@element-plus/icons-vue';
   import type { ImageTractItem } from '@/stores/trackState';
   import { formatTime } from '@/utils/common';
   import { computed } from 'vue';
   import { formatTrackItemData } from '@/utils/storeUtil';
   import { useTrackState } from '@/stores/trackState';
   import { usePlayerState } from '@/stores/playerState';
+  import { ElMessageBox } from 'element-plus';
+
   const props = defineProps({
     data: {
       type: Object,
@@ -43,8 +51,13 @@
     type: {
       type: String,
       default: ''
+    },
+    closable: {
+      type: Boolean,
+      default: false
     }
   });
+  const emit = defineEmits(['delete']);
   const formatData = computed(() => {
     let { time, frameCount } = props.data;
     if (props.type === 'video' && !time) {
@@ -88,5 +101,22 @@
     if (['image'].includes(props.type) && event.target) {
       (event.target as HTMLImageElement).src = imageSource;
     }
+  }
+  function handleDelete() {
+    ElMessageBox.confirm(
+      '确认删除该文件吗？删除后无法恢复。',
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+      .then(() => {
+        emit('delete', props.data);
+      })
+      .catch(() => {
+        // catch cancel
+      });
   }
 </script>

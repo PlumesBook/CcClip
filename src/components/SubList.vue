@@ -23,10 +23,10 @@
                 :key="`${item.name}${item.cover}${idnex}`"
             >
                 <template v-if="isAudio">
-                    <AudioResourceItem :data="item" :type="type" />
+                    <AudioResourceItem :data="item" :type="type" :closable="isUserUpload" @delete="onDelete" />
                 </template>
                 <template v-else>
-                    <OtherResource :data="item" :type="type" />
+                    <OtherResource :data="item" :type="type" :closable="isUserUpload" @delete="onDelete" />
                 </template>
             </li>
         </ul>
@@ -58,11 +58,15 @@
   const emit = defineEmits({
     upload(item: Record<string, any>) {
       return Boolean(item);
+    },
+    delete(item: Record<string, any>) {
+      return Boolean(item);
     }
   });
   const listData = ref(props.listData);
   const isAudio = computed(() => props.type === 'audio');
   const showUploadArea = computed(() => ['video', 'audio', 'image'].includes(props.type) && (props.listData as any)?.title === '用户上传');
+  const isUserUpload = computed(() => (props.listData as any)?.title === '用户上传');
   const fileInput = ref<HTMLInputElement | null>(null);
   const acceptTypes = computed(() => {
     if (props.type === 'audio') {
@@ -91,6 +95,10 @@
     }
     return VideoIcon;
   });
+
+  function onDelete(item: any) {
+    emit('delete', item);
+  }
 
   function triggerSelect() {
     if (fileInput.value) {

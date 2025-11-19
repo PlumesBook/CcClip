@@ -12,7 +12,7 @@ class="flex flex-col transition-all duration-200 overflow-x-hidden border-r dark
             </div>
             <div class="overflow-auto flex-1 pb-10">
                 <template v-for="(subData, index) of listData" :key="`${index}-${subData.type}`">
-                    <SubList :type="subData.type" :listData="subData" @upload="handleUpload($event, index)" />
+                    <SubList :type="subData.type" :listData="subData" @upload="handleUpload($event, index)" @delete="handleDelete($event, index)" />
                 </template>
             </div>
         </div>
@@ -25,7 +25,7 @@ class="flex flex-col transition-all duration-200 overflow-x-hidden border-r dark
   import SubList from '@/components/SubList.vue';
   import { getData } from '@/api/mock';
   import { useRequest } from 'vue-hooks-plus';
-  import { saveUploadResource, getUploadResources, type UploadStoreRecord } from '@/utils/uploadStore';
+  import { saveUploadResource, getUploadResources, deleteUploadResource, type UploadStoreRecord } from '@/utils/uploadStore';
   import { useTrackState } from '@/stores/trackState';
   const props = defineProps({
     activeKey: {
@@ -170,6 +170,22 @@ class="flex flex-col transition-all duration-200 overflow-x-hidden border-r dark
           sourceFrame: rest.sourceFrame
         });
         insertItem.uploadId = id;
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
+  async function handleDelete(item: Record<string, any>, subIndex: number) {
+    const list = (listData as any).value || [];
+    const target = list[subIndex];
+    if (!target || !Array.isArray(target.items)) return;
+    if (item.uploadId) {
+      try {
+        await deleteUploadResource(item.uploadId);
+        const itemIndex = target.items.indexOf(item);
+        if (itemIndex > -1) {
+          target.items.splice(itemIndex, 1);
+        }
       } catch (e) {
         // ignore
       }

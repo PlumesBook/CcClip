@@ -16,6 +16,12 @@
         </ElIcon>
       </div>
       <div
+          v-if="closable"
+          class="absolute top-1 right-1 z-10"
+      >
+        <el-button type="danger" :icon="Close" circle size="small" @click.stop="handleDelete" />
+      </div>
+      <div
           class="absolute bottom-2 right-2 bg-blue-500 rounded-full w-6 h-6"
           @click="addTrack"
       >
@@ -28,12 +34,14 @@
 </template>
 
 <script setup lang="ts">
-  import { Plus, VideoPlay } from '@element-plus/icons-vue';
+  import { Plus, VideoPlay, Close } from '@element-plus/icons-vue';
   import type { AudioTractItem } from '@/stores/trackState';
   import { formatTime } from '@/utils/common';
   import { formatTrackItemData } from '@/utils/storeUtil';
   import { useTrackState } from '@/stores/trackState';
   import { usePlayerState } from '@/stores/playerState';
+  import { ElMessageBox } from 'element-plus';
+
   const props = defineProps({
     data: {
       type: Object,
@@ -44,8 +52,13 @@
     type: {
       type: String,
       default: ''
+    },
+    closable: {
+      type: Boolean,
+      default: false
     }
   });
+  const emit = defineEmits(['delete']);
   const store = useTrackState();
   const playerStore = usePlayerState();
   function dragStart(event: DragEvent) {
@@ -70,5 +83,22 @@
       ...props.data
     };
     store.addTrack(formatTrackItemData(dragInfo, playerStore.playStartFrame));
+  }
+  function handleDelete() {
+    ElMessageBox.confirm(
+      '确认删除该文件吗？删除后无法恢复。',
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+      .then(() => {
+        emit('delete', props.data);
+      })
+      .catch(() => {
+        // catch cancel
+      });
   }
 </script>
