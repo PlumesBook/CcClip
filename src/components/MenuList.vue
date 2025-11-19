@@ -58,6 +58,11 @@
   });
 
   function activeChangeHandler(index: number) {
+    if (store.hideSubMenu) {
+      store.hideSubMenu = false;
+    } else if (index === activeIndex.value) {
+      store.hideSubMenu = true;
+    }
     activeIndex.value = index;
     emit('activeChange', menuData[activeIndex.value]);
   }
