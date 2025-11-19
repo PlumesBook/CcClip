@@ -1,22 +1,21 @@
 <template>
   <div
-      class="absolute left-0 right-0 top-0 bottom-0 border z-20"
-      :class="{ 'dark:border-gray-100 border-gray-600': isActive }"
+      class="absolute left-0 right-0 top-0 bottom-0 border border-white/40 rounded z-20 pointer-events-none"
       v-show="isActive"
   >
     <div
-        class="cursor-c-resize flex flex-col justify-center absolute bottom-0 -top-px -bottom-px -left-2 text-center rounded-tl rounded-bl w-2 dark:bg-gray-100 bg-gray-600 dark:text-gray-800 text-gray-100"
+        class="pointer-events-auto cursor-ew-resize flex flex-col justify-center items-center absolute bottom-0 top-0 -left-1.5 text-center w-3 group"
         ref="handlerLeft"
         @mousedown="mouseDownHandler($event, 'left')"
     >
-      <span>|</span>
+      <div class="w-1.5 h-1/3 bg-white rounded-full shadow-sm group-hover:h-1/2 transition-all"></div>
     </div>
     <div
-        class="cursor-c-resize flex flex-col justify-center absolute bottom-0 -top-px -bottom-px -right-2 text-center rounded-tr rounded-br w-2 dark:bg-gray-100 bg-gray-600 dark:text-gray-800 text-gray-100"
+        class="pointer-events-auto cursor-ew-resize flex flex-col justify-center items-center absolute bottom-0 top-0 -right-1.5 text-center w-3 group"
         ref="handlerRight"
         @mousedown="mouseDownHandler($event, 'right')"
     >
-      <span>|</span>
+      <div class="w-1.5 h-1/3 bg-white rounded-full shadow-sm group-hover:h-1/2 transition-all"></div>
     </div>
   </div>
 </template>

@@ -1,9 +1,9 @@
 <template>
   <div
-      class="z-30 w-px absolute -top-5 bottom-0 bg-gray-700 dark:bg-gray-100 transition-transform duration-75"
+      class="z-30 w-px absolute -top-5 bottom-0 bg-cc-primary transition-transform duration-75 pointer-events-none"
       :style="trackStyle"
   >
-    <span class="playPoint block border-1 border-gray-600 bg-gray-600 h-3 w-2.5 dark:border-gray-100 dark:bg-gray-100 sticky top-0 right-0 left-0" />
+    <div class="playPoint block absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-cc-primary rotate-45 rounded-tl-[50%] rounded-tr-[50%] rounded-bl-[50%] z-40 shadow-[0_0_4px_rgba(0,229,255,0.6)]"></div>
   </div>
 </template>
 
@@ -26,19 +26,5 @@
 </script>
 
 <style scoped>
-  .playPoint{
-    transform: translateX(-50%);
-  }
-  .playPoint::after{
-    content: '';
-    display: block;
-    width: 10px;
-    height: 10px;
-    border: 5px solid;
-    position: absolute;
-    top: 100%;
-    border-right-color: transparent;
-    border-left-color: transparent;
-    border-bottom-color: transparent;
-  }
+  /* Shape is handled by tailwind classes now */
 </style>

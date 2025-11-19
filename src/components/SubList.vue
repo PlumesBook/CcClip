@@ -60,6 +60,7 @@
   import VideoIcon from '@/components/icons/VideoIcon.vue';
   import AudioIcon from '@/components/icons/AudioIcon.vue';
   import ImageIcon from '@/components/icons/ImageIcon.vue';
+  import { Plus } from '@element-plus/icons-vue';
 
   const ffmpeg = inject('ffmpeg') as FFManager;
   const props = defineProps({

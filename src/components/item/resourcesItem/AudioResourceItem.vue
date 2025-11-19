@@ -1,40 +1,42 @@
 <template>
   <div
-      class="relative w-full flex flex-row pr-1 border border-gray-200 hover:border-gray-300 dark:border-gray-800 dark:hover:border-gray-600"
+      class="relative w-full flex flex-row p-2 rounded border border-transparent hover:bg-cc-surface-light group transition-colors cursor-grab active:cursor-grabbing"
+      :class="{'bg-cc-surface-light': false}"
       draggable="true"
       @dragstart="dragStart"
   >
-    <img class="w-20 h-20 rounded" :src="data.cover">
-    <div class="flex-1 flex flex-col">
-      <p class="max-h-10 overflow-clip text-sm flex-1 pl-3 mt-2">{{ data.name }}</p>
-      <span class="text-sm h-5 pl-3 mt-1"> {{ formatTime(data.time).str }} </span>
+    <div class="w-10 h-10 rounded bg-cc-surface flex items-center justify-center shrink-0 overflow-hidden border border-cc-border">
+       <img v-if="data.cover" class="w-full h-full object-cover" :src="data.cover">
+       <ElIcon v-else :size="20" class="text-cc-primary-blue">
+         <Headset />
+       </ElIcon>
     </div>
-    <div class="absolute w-full h-full opacity-0 hover:opacity-100 transition-opacity duration-200">
-      <div class="cursor-pointer rounded w-20 h-20 bg-gray-900 opacity-70 flex justify-center items-center">
-        <ElIcon size="36" color="#fff">
-          <VideoPlay />
-        </ElIcon>
-      </div>
-      <div
+    <div class="flex-1 flex flex-col justify-center ml-3 overflow-hidden">
+      <p class="text-xs text-cc-text-main truncate font-medium">{{ data.name }}</p>
+      <span class="text-[10px] text-cc-text-sub mt-0.5"> {{ formatTime(data.time).str }} </span>
+    </div>
+    
+    <!-- Hover Actions -->
+    <div class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+       <div
           v-if="closable"
-          class="absolute top-1 right-1 z-10"
+          class="w-6 h-6 flex items-center justify-center rounded hover:bg-red-500/20 hover:text-red-500 text-cc-text-sub transition-colors cursor-pointer"
+          @click.stop="handleDelete"
       >
-        <el-button type="danger" :icon="Close" circle size="small" @click.stop="handleDelete" />
+        <ElIcon :size="14"><Delete /></ElIcon>
       </div>
       <div
-          class="absolute bottom-2 right-2 bg-blue-500 rounded-full w-6 h-6"
+          class="w-6 h-6 flex items-center justify-center rounded hover:bg-cc-primary/20 hover:text-cc-primary text-cc-text-sub transition-colors cursor-pointer"
           @click="addTrack"
       >
-        <ElIcon :size="16" color="#fff" class="cursor-pointer p-1 box-content">
-          <Plus />
-        </ElIcon>
+        <ElIcon :size="16"><Plus /></ElIcon>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-  import { Plus, VideoPlay, Close } from '@element-plus/icons-vue';
+  import { Plus, Delete, Headset } from '@element-plus/icons-vue';
   import type { AudioTractItem } from '@/stores/trackState';
   import { formatTime } from '@/utils/common';
   import { formatTrackItemData } from '@/utils/storeUtil';
@@ -92,6 +94,7 @@
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning',
+        customClass: 'cc-message-box'
       }
     )
       .then(() => {

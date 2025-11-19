@@ -1,21 +1,22 @@
 <template>
-  <ul class="w-16 flex flex-col bg-cc-surface border-r border-cc-border h-full py-2 gap-2">
+  <ul class="w-16 flex flex-col bg-cc-surface border-r border-cc-border h-full py-2 gap-1">
     <li
       v-for="(item, index) of showMenuData" :key="item.key"
-      class="w-12 mx-auto flex flex-col items-center justify-center py-3 rounded-lg cursor-pointer transition-all duration-200 hover:bg-cc-surface-light group"
-      :class="item.active ? 'bg-cc-surface-light text-cc-primary' : 'text-cc-text-sub'"
+      class="w-full flex flex-col items-center justify-center py-3 cursor-pointer transition-colors duration-200 group relative"
+      :class="item.active ? 'text-cc-primary' : 'text-cc-text-sub hover:text-white hover:bg-white/5'"
       @click="activeChangeHandler(index)"
     >
+      <!-- Active Indicator Line -->
+      <div v-if="item.active" class="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-cc-primary rounded-r"></div>
+
       <ElIcon
-        :size="20"
-        class="transition-colors duration-200"
-        :class="item.active ? 'text-cc-primary' : 'text-cc-text-sub group-hover:text-cc-text-main'"
+        :size="22"
+        class="mb-1"
       >
         <component :is="item.icon" />
       </ElIcon>
       <span
-        class="mt-1 select-none text-[10px] font-medium"
-        :class="item.active ? 'text-cc-primary' : 'text-cc-text-sub group-hover:text-cc-text-main'"
+        class="select-none text-[10px] font-medium scale-90"
       >{{ item.title }}</span>
     </li>
   </ul>

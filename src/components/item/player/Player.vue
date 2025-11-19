@@ -1,11 +1,29 @@
 <template>
-  <div class="p-2 absolute top-12 bottom-10 left-2 right-2 overflow-visible">
-    <canvas ref="playerCanvas" class="absolute left-0 right-0 top-0 bottom-0 m-auto bg-gray-900" />
-    <div v-show="store.frameCount === 0 || !store.existVideo" class="absolute left-0 right-0 top-0 bottom-0 z-20 flex justify-center items-center">
-      <ElIcon :size="144" class="box-content opacity-50" :style="{ color: '#FDE68A' }">
-        <VideoCameraFilled />
-      </ElIcon>
+  <div class="p-0 absolute top-10 bottom-0 left-0 right-0 overflow-hidden flex items-center justify-center bg-black">
+    <canvas ref="playerCanvas" class="max-w-full max-h-full" />
+    
+    <!-- Empty State / Upload Hint -->
+    <div v-show="store.frameCount === 0 || !store.existVideo" class="absolute inset-0 z-20 flex flex-col justify-center items-center pointer-events-none">
+       <div class="flex flex-col items-center gap-4">
+          <div class="w-16 h-16 bg-cc-primary rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(0,229,255,0.3)] animate-pulse pointer-events-auto cursor-pointer hover:scale-105 transition-transform duration-300">
+             <ElIcon :size="32" color="#000"><Plus /></ElIcon>
+          </div>
+          <div class="text-center">
+             <p class="text-sm font-medium text-white/90">点击上传素材</p>
+             <p class="text-xs text-white/50 mt-1">或将文件拖拽到这里</p>
+          </div>
+          
+          <div class="flex gap-3 mt-2 pointer-events-auto">
+             <div class="w-10 h-10 rounded bg-white/10 hover:bg-white/20 flex items-center justify-center cursor-pointer transition-colors">
+                <ElIcon :size="18" class="text-white/70"><FolderOpened /></ElIcon>
+             </div>
+             <div class="w-10 h-10 rounded bg-white/10 hover:bg-white/20 flex items-center justify-center cursor-pointer transition-colors">
+                <ElIcon :size="18" class="text-white/70"><Upload /></ElIcon>
+             </div>
+          </div>
+       </div>
     </div>
+
     <Loading v-show="showLoading.value" class="justify-center pl-0 bg-opacity-0" />
     <PlayerMoveable :canvasSize="player.canvasSize" />
   </div>
@@ -16,7 +34,7 @@
 <script setup lang="ts">
   import PlayerMoveable from '@/components/item/player/PlayerMoveable.vue';
   import PlayerControl from '@/components/item/player/PlayerControl.vue';
-  import { VideoCameraFilled } from '@element-plus/icons-vue';
+  import { VideoCameraFilled, Plus, FolderOpened, Upload } from '@element-plus/icons-vue';
   import Loading from '@/components/Loading.vue';
   import { ref, inject, computed } from 'vue';
   import FFManager from '@/utils/ffmpegManager';

@@ -1,38 +1,48 @@
 <template>
   <div
-    class="inline-block relative w-22 group"
+    class="inline-block relative w-[calc(50%-4px)] group mb-2 cursor-grab active:cursor-grabbing"
     draggable="true"
     @dragstart="dragStart"
   >
-    <img
-      referrerpolicy="no-referrer"
-      class=" cursor-pointer w-full h-24 block select-none dark:hover:border-cyan-800 hover:border-cyan-200 box-border"
-      :class="type === 'video' ? 'w-34 border-2 dark:border-gray-800 border-gray-50' : 'w-22 border dark:border-gray-700 border-gray-200'"
-      :src="formatData.cover"
-      @mousemove="showGif($event, formatData.source)"
-      @mouseout="showGif($event, formatData.cover)"
-    >
-    <label class="mt-1 mb-3 text-xs w-full text-center select-none dark:text-gray-400 text-gray-600" v-show="showData.showName">{{ formatData.name }}</label>
-    <span class="h-5 absolute bottom-1 right-2 text-xs text-gray-400" v-show="showData.showTime">{{ formatTime(formatData.time).str }}</span>
-    <div
-        v-if="closable"
-        class="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-10"
-    >
-      <el-button type="danger" :icon="Close" circle size="small" @click.stop="handleDelete" />
+    <div class="relative w-full aspect-video rounded overflow-hidden bg-cc-surface border border-cc-border group-hover:border-cc-primary transition-colors">
+      <img
+        referrerpolicy="no-referrer"
+        class="w-full h-full object-cover block select-none"
+        :src="formatData.cover"
+        @mousemove="showGif($event, formatData.source)"
+        @mouseout="showGif($event, formatData.cover)"
+      >
+      <!-- Time Badge -->
+      <div v-show="showData.showTime" class="absolute bottom-1 right-1 bg-black/60 px-1 rounded text-[10px] text-white font-mono tabular-nums backdrop-blur-sm">
+        {{ formatTime(formatData.time).str }}
+      </div>
+      
+      <!-- Hover Actions -->
+      <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+         <div
+            class="w-8 h-8 rounded-full bg-cc-primary flex items-center justify-center text-white hover:scale-110 transition-transform cursor-pointer shadow-lg"
+            @click="addTrack"
+        >
+          <ElIcon :size="18"><Plus /></ElIcon>
+        </div>
+        <div
+            v-if="closable"
+            class="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center text-white hover:scale-110 transition-transform cursor-pointer shadow-lg"
+            @click.stop="handleDelete"
+        >
+          <ElIcon :size="16"><Delete /></ElIcon>
+        </div>
+      </div>
     </div>
-    <div
-        class="absolute top-16 right-1 bg-blue-500 rounded-full w-6 h-6 opacity-0 hover:opacity-100 transition-opacity duration-150"
-        @click="addTrack"
-    >
-      <ElIcon :size="16" color="#fff" class="cursor-pointer p-1 box-content">
-        <Plus />
-      </ElIcon>
+    
+    <div class="mt-1.5 px-0.5">
+      <p class="text-xs text-cc-text-main truncate" :title="formatData.name">{{ formatData.name }}</p>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-  import { Plus, Close } from '@element-plus/icons-vue';
+  import { Plus, Delete } from '@element-plus/icons-vue';
   import type { ImageTractItem } from '@/stores/trackState';
   import { formatTime } from '@/utils/common';
   import { computed } from 'vue';
@@ -70,7 +80,7 @@
   });
   const showData = computed(() => {
     return {
-      showName: ['effect', 'transition', 'filter'].includes(props.type),
+      showName: true, // Always show name in CapCut style
       showTime: ['video'].includes(props.type)
     };
   });
@@ -110,6 +120,7 @@
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning',
+        customClass: 'cc-message-box'
       }
     )
       .then(() => {

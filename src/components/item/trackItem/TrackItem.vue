@@ -1,7 +1,11 @@
 <template>
   <div
-      class="text-left text-sm top-0 absolute "
-      :class="[TrackHeightMap.get(props.trackItem.type), isDragState ? 'opacity-30' : '']"
+      class="text-left text-sm top-0 absolute rounded overflow-hidden ring-2 ring-transparent transition-all"
+      :class="[
+        TrackHeightMap.get(props.trackItem.type), 
+        isDragState ? 'opacity-50' : '',
+        isActive ? 'ring-cc-primary z-10' : 'hover:ring-cc-primary/50'
+      ]"
       :style="itemClass"
       @click="setSelectTract"
   >
@@ -26,7 +30,7 @@
   import FilterItem from '@/components/item/trackItem/template/FilterItem.vue';
   import { TrackHeightMap } from '@/data/trackConfig';
   import { useTrackState } from '@/stores/trackState';
-  import { computed } from 'vue';
+  import { computed, shallowRef } from 'vue';
   const props = defineProps({
     trackType: {
       type: String,
@@ -60,7 +64,9 @@
   const isActive = computed(() => {
     return store.selectTrackItem.line === props.lineIndex && store.selectTrackItem.index === props.itemIndex;
   });
-  const componentMap = new Map([
+  
+  // Use shallowRef and any for the map to avoid strict prop typing issues with dynamic components
+  const componentMap = new Map<string, any>([
     ['video', VideoItem],
     ['audio', AudioItem],
     ['text', TextItem],

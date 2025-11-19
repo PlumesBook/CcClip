@@ -1,19 +1,33 @@
 <template>
-  <div class="flex items-center justify-center absolute bottom-0 left-0 right-0 pl-4 pr-4 h-8 border-t dark:border-gray-600 border-gray-300">
-    <div class="absolute left-4 h-full text-xs leading-8">
-      <span class="text-blue-400 mr-1 w-20 inline-block">{{ playTime }}</span>/<span class="ml-2 w-20">{{ allTime }}</span>
+  <div class="flex items-center justify-between absolute bottom-0 left-0 right-0 px-4 h-10 bg-cc-surface border-t border-cc-border select-none z-30">
+    <div class="flex items-center gap-2 w-24">
+      <span class="text-xs font-mono text-cc-primary">{{ playTime }}</span>
+      <span class="text-xs text-cc-text-sub">/</span>
+      <span class="text-xs font-mono text-cc-text-sub">{{ allTime }}</span>
     </div>
-    <div class="m-auto flex items-center">
-      <ElIcon :size="24" class="cursor-pointer box-content" :class="[disable ? 'cursor-not-allowed' : 'cursor-pointer']">
-        <VideoPause v-show="!store.isPause" @click="pauseVideo" />
-        <VideoPlay v-show="store.isPause" @click="startPlay" />
-      </ElIcon>
+    
+    <div class="flex items-center gap-4 absolute left-1/2 -translate-x-1/2">
+      <div 
+         class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 cursor-pointer transition-colors"
+         :class="[disable ? 'cursor-not-allowed opacity-50' : '']"
+         @click="togglePlay"
+      >
+         <ElIcon :size="20" color="#fff">
+            <VideoPause v-show="!store.isPause" />
+            <VideoPlay v-show="store.isPause" class="ml-0.5" />
+         </ElIcon>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3 w-24 justify-end">
+       <!-- Placeholder for Fullscreen/Volume -->
+       <ElIcon :size="16" class="text-cc-text-sub hover:text-white cursor-pointer"><FullScreen /></ElIcon>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-  import { VideoPlay, VideoPause } from '@element-plus/icons-vue';
+  import { VideoPlay, VideoPause, FullScreen } from '@element-plus/icons-vue';
   import { ref, computed, watch } from 'vue';
   import { formatPlayerTime } from '@/utils/common';
   import { usePlayerState } from '@/stores/playerState';
@@ -32,6 +46,15 @@
   });
   let playTimer = ref();
   const timeStamp = 1000 / 30;
+  
+  const togglePlay = () => {
+    if (store.isPause) {
+        startPlay();
+    } else {
+        pauseVideo();
+    }
+  }
+
   // 视频暂停
   const pauseVideo = () => {
     if (props.disable) return;

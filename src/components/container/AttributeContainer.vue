@@ -1,20 +1,29 @@
 <template>
   <div
-    class="select-none relative pl-2 bg-cc-surface border-l border-cc-border"
+    class="select-none relative pl-0 bg-cc-surface border-l border-cc-border flex flex-col"
     :style="attrWidth"
   >
     <SplitLine
-      class="top-0 left-0 bottom-0 opacity-0 hover:opacity-100 transition-opacity"
+      class="top-0 left-0 bottom-0 opacity-0 hover:opacity-100 transition-opacity z-20"
       direction="vertical"
       :limitSize="limitSize"
       disabled
       v-model:newWidth="pageStore.attrWidth"
     />
-    <div v-show="selectTrackOptionsConfig.length === 0" class="w-full h-full flex flex-col justify-center items-center text-cc-text-sub">
-      <AttrEmptyIcon class="text-4xl mb-4 opacity-50" />
-      <span class="text-sm font-medium">点击轨道进行编辑</span>
+    
+    <!-- Panel Header -->
+    <div class="h-10 flex items-center px-4 border-b border-cc-border shrink-0 bg-cc-surface">
+       <span class="text-sm font-semibold text-white">属性</span>
     </div>
-    <div v-if="selectTrackOptionsConfig.length > 0" class="absolute top-0 left-3 right-2 bottom-0 overflow-y-auto custom-scrollbar">
+
+    <div v-show="selectTrackOptionsConfig.length === 0" class="flex-1 flex flex-col justify-center items-center text-cc-text-sub opacity-50">
+      <div class="w-16 h-16 mb-4 rounded-full bg-cc-surface-light flex items-center justify-center">
+          <ElIcon :size="32"><Edit /></ElIcon>
+      </div>
+      <span class="text-xs">选中轨道以编辑属性</span>
+    </div>
+    
+    <div v-if="selectTrackOptionsConfig.length > 0" class="flex-1 overflow-y-auto custom-scrollbar px-3 py-4">
       <AttrContainer :attrData="selectTrackOptionsConfig" :trackId="trackStore.selectResource?.id" />
     </div>
   </div>
@@ -25,7 +34,9 @@
   import { useTrackState } from '@/stores/trackState';
   import SplitLine from '@/components/SplitLine.vue';
   import { usePageState } from '@/stores/pageState';
-  import { computed, reactive, ref } from 'vue';
+  import { computed, reactive } from 'vue';
+  import { Edit } from '@element-plus/icons-vue';
+  
   const pageStore = usePageState();
   const trackStore = useTrackState();
 

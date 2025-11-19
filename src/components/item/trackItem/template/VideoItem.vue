@@ -1,20 +1,22 @@
 <template>
-    <div class="flex flex-col rounded overflow-hidden h-full">
-        <div class="flex items-center text-xs pl-2 overflow-hidden h-5 leading-5 bg-gray-500 bg-opacity-40 text-gray-200">
-          <VideoIcon class="inline-block mr-2 shrink-0" />
-          <span class="mr-4 shrink-0">{{ `${trackItem.name}.${trackItem.format}` }}</span>
-          <span class="mr-4 shrink-0">{{ trackItem.time }}</span>
-        </div>
-        <div ref="container" class="overflow-hidden bg-gray-400 bg-opacity-70 flex-1 relative">
+    <div class="flex flex-col rounded overflow-hidden h-full relative group">
+        <div ref="container" class="overflow-hidden bg-cc-surface-light/50 flex-1 relative">
           <VideoFrame
               type="video"
               :trackItem="trackItem"
               :drawState="!loading"
           />
+          <!-- Text Overlay -->
+          <div class="absolute top-0.5 left-1 right-1 z-10 flex items-center justify-between pointer-events-none">
+             <span class="text-[10px] text-white/90 drop-shadow-md truncate max-w-[80%] font-medium">{{ `${trackItem.name}.${trackItem.format}` }}</span>
+          </div>
         </div>
-        <div class="leading-3 pl-2 overflow-hidden h-3 bg-gray-700 relative">
-          <img :src="waveFileUrl" v-show="waveFileUrl" class="absolute left-0 right-0 top-0 bottom-0 h-full min-w-full" :style="waveStyle" alt="">
+        
+        <!-- Audio Waveform Strip (if audio exists in video) -->
+        <div class="h-1/3 bg-blue-900/30 relative overflow-hidden border-t border-white/10">
+          <img :src="waveFileUrl" v-show="waveFileUrl" class="absolute left-0 right-0 top-0 bottom-0 h-full min-w-full opacity-80" :style="waveStyle" alt="">
         </div>
+        
         <Loading v-show="loading" class="pl-12 bg-opacity-70" />
     </div>
 </template>

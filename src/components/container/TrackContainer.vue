@@ -9,9 +9,15 @@
       :limitSize="limitSize"
       v-model:newHeight="page.trackHeight"
     />
-    <TrackContro
-      v-model="store.trackScale"
-    />
+    <div class="h-10 border-b border-cc-border bg-cc-surface flex items-center px-4 justify-between shrink-0">
+       <div class="flex items-center gap-2">
+         <!-- Toolbar placeholders can go here -->
+       </div>
+       <TrackContro
+          v-model="store.trackScale"
+        />
+    </div>
+    
     <TrackList class="flex-1 bg-cc-bg" />
   </div>
 </template>

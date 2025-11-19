@@ -1,11 +1,12 @@
 <template>
-  <div class="flex flex-col rounded overflow-hidden h-full">
-    <div class="flex items-center text-xs pl-2 overflow-hidden h-5 leading-5 bg-blue-500 bg-opacity-50 text-gray-100">
-      <AudioIcon class="inline-block mr-2 shrink-0" />
-      <span class="mr-4 shrink-0">{{ `${trackItem.name}.${trackItem.format}` }}</span>
+  <div class="flex flex-col rounded overflow-hidden h-full relative bg-blue-500/20 border border-blue-500/30">
+    <!-- Info Overlay -->
+    <div class="absolute top-0.5 left-1 z-10 flex items-center max-w-full overflow-hidden pointer-events-none">
+      <span class="text-[10px] text-blue-100/90 drop-shadow-md truncate font-medium">{{ trackItem.name }}</span>
     </div>
-    <div class="overflow-hidden bg-blue-900 bg-opacity-60 flex-1 relative">
-      <img :src="waveFileUrl" v-show="waveFileUrl" class="absolute left-0 right-0 top-0 bottom-0 h-full min-w-full" :style="waveStyle" alt="">
+
+    <div class="overflow-hidden flex-1 relative mt-1">
+      <img :src="waveFileUrl" v-show="waveFileUrl" class="absolute left-0 right-0 top-0 bottom-0 h-full min-w-full opacity-90 mix-blend-overlay filter brightness-125" :style="waveStyle" alt="">
     </div>
     <Loading v-show="loading" class="pl-12 bg-opacity-70" />
   </div>
