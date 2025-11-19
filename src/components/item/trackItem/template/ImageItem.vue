@@ -38,6 +38,18 @@
         w: width,
         h: height
       });
+      // 动态更新 gif 帧数，保证轨道预览与导出时为动图
+      try {
+        const frameDir = `${ffmpeg.pathConfig.framePath}${name}`;
+        const files = ffmpeg.readDir(frameDir) || [];
+        const frameFiles = Array.isArray(files)
+          ? files.filter((n: string) => typeof n === 'string' && n.startsWith('gif-') && n.endsWith('.png'))
+          : [];
+        const frameLen = frameFiles.length || 1;
+        (props.trackItem as any).sourceFrame = frameLen;
+      } catch (e) {
+        // ignore
+      }
       store.ingLoadingCount--;
     }
   }

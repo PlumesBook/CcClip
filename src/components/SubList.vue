@@ -227,24 +227,34 @@
       const frameCount = Math.max(1, Math.round(time * fps / 1000));
       const baseName = getBaseName(file.name);
       const format = getFormat(file.name);
-      const emitItem = () => {
-        emit('upload', {
-          name: baseName,
-          format,
-          cover: url,
-          source: url,
-          width,
-          height,
-          fps,
-          frameCount,
-          time,
-          sourceFrame: 1,
-          file,
-          groupType: props.type,
-          groupTitle: (props.listData as any)?.title
-        });
-      };
-      emitItem();
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      let cover = url;
+      if (ctx) {
+        try {
+          ctx.drawImage(image, 0, 0, width, height);
+          cover = canvas.toDataURL('image/png');
+        } catch (e) {
+          // ignore, fallback to gif url
+        }
+      }
+      emit('upload', {
+        name: baseName,
+        format,
+        cover,
+        source: url,
+        width,
+        height,
+        fps,
+        frameCount,
+        time,
+        sourceFrame: 1,
+        file,
+        groupType: props.type,
+        groupTitle: (props.listData as any)?.title
+      });
     };
     image.src = url;
   }
