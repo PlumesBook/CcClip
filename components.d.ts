@@ -94,4 +94,7 @@ declare module '@vue/runtime-core' {
     VideoItem: typeof import('./src/components/item/trackItem/template/VideoItem.vue')['default']
     WelcomeItem: typeof import('./src/components/WelcomeItem.vue')['default']
   }
+  export interface ComponentCustomProperties {
+    vLoading: typeof import('element-plus/es')['ElLoadingDirective']
+  }
 }

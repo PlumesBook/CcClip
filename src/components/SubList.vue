@@ -18,6 +18,25 @@
             >
         </div>
         <ul class="flex flex-row flex-wrap">
+            <!-- 上传占位 -->
+            <li
+                class="flex flex-col mb-2 p-1.5 relative"
+                :class="{ 'w-full': isAudio, 'w-22': !isAudio, 'h-24': !isAudio }"
+                v-for="(item, index) in uploadingItems"
+                :key="`uploading-${index}`"
+            >
+               <div 
+                 class="relative w-full h-full border border-gray-300 dark:border-gray-600 rounded bg-gray-100 dark:bg-gray-800 flex flex-col items-center justify-center overflow-hidden"
+                 :class="{ 'h-20': isAudio, 'h-full': !isAudio }"
+               >
+                  <component :is="uploadIcon" class="text-2xl text-gray-400 mb-1" />
+                  <span class="text-xs text-gray-500 px-2 truncate max-w-full">{{ item.name }}</span>
+                  <!-- 底部进度条 -->
+                  <div class="absolute bottom-0 left-0 w-full h-1 bg-gray-200 dark:bg-gray-700">
+                    <div class="h-full bg-blue-500 transition-all duration-300" :style="{ width: (item.progress || 0) + '%' }"></div>
+                  </div>
+               </div>
+            </li>
             <li
             class="flex flex-col mb-2 p-1.5" :class="{ 'w-full': isAudio }" v-for="(item, idnex) of listData.items"
                 :key="`${item.name}${item.cover}${idnex}`"
@@ -34,13 +53,14 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, computed, inject } from 'vue';
+  import { ref, computed, inject, reactive } from 'vue';
   import type FFManager from '@/utils/ffmpegManager';
   import AudioResourceItem from '@/components/item/resourcesItem/AudioResourceItem.vue';
   import OtherResource from '@/components/item/resourcesItem/OtherResource.vue';
   import VideoIcon from '@/components/icons/VideoIcon.vue';
   import AudioIcon from '@/components/icons/AudioIcon.vue';
   import ImageIcon from '@/components/icons/ImageIcon.vue';
+
   const ffmpeg = inject('ffmpeg') as FFManager;
   const props = defineProps({
     listData: {
@@ -66,6 +86,7 @@
     }
   });
   const listData = ref(props.listData);
+  const uploadingItems = reactive<any[]>([]);
   const isAudio = computed(() => props.type === 'audio');
   const showUploadArea = computed(() => ['video', 'audio', 'image'].includes(props.type) && (props.listData as any)?.title === '用户上传');
   const isUserUpload = computed(() => (props.listData as any)?.title === '用户上传');
@@ -140,7 +161,26 @@
     });
   }
 
+  function startProgress(item: any) {
+    item.progress = 0;
+    const interval = setInterval(() => {
+      if (item.progress < 90) {
+        item.progress += 5;
+      }
+    }, 100);
+    return interval;
+  }
+
   function createVideoResourceFromFile(file: File) {
+    const placeholder = { type: 'video', name: file.name, progress: 0 };
+    uploadingItems.push(placeholder);
+    const timer = startProgress(placeholder);
+    const removePlaceholder = () => {
+      clearInterval(timer);
+      const index = uploadingItems.indexOf(placeholder);
+      if (index > -1) uploadingItems.splice(index, 1);
+    };
+
     const url = URL.createObjectURL(file);
     const video = document.createElement('video');
     video.preload = 'metadata';
@@ -159,20 +199,24 @@
       canvas.height = height;
       const ctx = canvas.getContext('2d');
       const emitItem = (cover: string) => {
-        emit('upload', {
-          name: baseName,
-          format,
-          cover,
-          source: url,
-          width,
-          height,
-          fps,
-          frameCount,
-          time,
-          file,
-          groupType: props.type,
-          groupTitle: (props.listData as any)?.title
-        });
+        placeholder.progress = 100;
+        setTimeout(() => {
+            emit('upload', {
+            name: baseName,
+            format,
+            cover,
+            source: url,
+            width,
+            height,
+            fps,
+            frameCount,
+            time,
+            file,
+            groupType: props.type,
+            groupTitle: (props.listData as any)?.title
+            });
+            removePlaceholder();
+        }, 200);
       };
       if (ctx) {
         const capture = () => {
@@ -194,9 +238,21 @@
         emitItem('');
       }
     };
+    video.onerror = () => {
+      removePlaceholder();
+    };
   }
 
   function createAudioResourceFromFile(file: File) {
+    const placeholder = { type: 'audio', name: file.name, progress: 0 };
+    uploadingItems.push(placeholder);
+    const timer = startProgress(placeholder);
+    const removePlaceholder = () => {
+      clearInterval(timer);
+      const index = uploadingItems.indexOf(placeholder);
+      if (index > -1) uploadingItems.splice(index, 1);
+    };
+
     const url = URL.createObjectURL(file);
     const audio = document.createElement('audio');
     audio.preload = 'metadata';
@@ -207,26 +263,42 @@
       const baseName = getBaseName(file.name);
       const format = getFormat(file.name);
       const emitItem = () => {
-        emit('upload', {
-          name: baseName,
-          format,
-          cover: '',
-          source: url,
-          width: 0,
-          height: 0,
-          fps: 0,
-          frameCount: 0,
-          time,
-          file,
-          groupType: props.type,
-          groupTitle: (props.listData as any)?.title
-        });
+        placeholder.progress = 100;
+        setTimeout(() => {
+            emit('upload', {
+            name: baseName,
+            format,
+            cover: '',
+            source: url,
+            width: 0,
+            height: 0,
+            fps: 0,
+            frameCount: 0,
+            time,
+            file,
+            groupType: props.type,
+            groupTitle: (props.listData as any)?.title
+            });
+            removePlaceholder();
+        }, 200);
       };
       emitItem();
+    };
+    audio.onerror = () => {
+      removePlaceholder();
     };
   }
 
   function createImageResourceFromFile(file: File) {
+    const placeholder = { type: 'image', name: file.name, progress: 0 };
+    uploadingItems.push(placeholder);
+    const timer = startProgress(placeholder);
+    const removePlaceholder = () => {
+      clearInterval(timer);
+      const index = uploadingItems.indexOf(placeholder);
+      if (index > -1) uploadingItems.splice(index, 1);
+    };
+
     const url = URL.createObjectURL(file);
     const image = new Image();
     image.onload = async () => {
@@ -275,21 +347,28 @@
           // ignore, fallback to gif url
         }
       }
-      emit('upload', {
-        name: baseName,
-        format,
-        cover,
-        source: url,
-        width,
-        height,
-        fps,
-        frameCount,
-        time,
-        sourceFrame,
-        file,
-        groupType: props.type,
-        groupTitle: (props.listData as any)?.title
-      });
+      placeholder.progress = 100;
+      setTimeout(() => {
+          emit('upload', {
+            name: baseName,
+            format,
+            cover,
+            source: url,
+            width,
+            height,
+            fps,
+            frameCount,
+            time,
+            sourceFrame,
+            file,
+            groupType: props.type,
+            groupTitle: (props.listData as any)?.title
+          });
+          removePlaceholder();
+      }, 200);
+    };
+    image.onerror = () => {
+      removePlaceholder();
     };
     image.src = url;
   }
