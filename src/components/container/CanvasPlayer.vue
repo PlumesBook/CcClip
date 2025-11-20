@@ -1,16 +1,11 @@
 <template>
-  <div class="flex-1 overflow-hidden relative bg-black flex flex-col border-l border-r border-cc-border" ref="playerContent" @click="cancelSelect">
-    <!-- Simple Player Header -->
-    <div class="h-10 shrink-0 flex items-center justify-center select-none pointer-events-none bg-cc-surface border-b border-cc-border">
-       <div class="flex items-center gap-2">
-          <span class="text-xs font-medium text-cc-text-sub">Player</span>
-          <span class="text-[10px] text-cc-text-sub/50">{{ containerSize.width }}x{{ containerSize.height }}</span>
-       </div>
-    </div>
-    
-    <!-- Player Area -->
+  <div
+    class="flex-1 overflow-hidden relative bg-black flex flex-col border-l border-r border-cc-border"
+    ref="playerContent"
+    @click="cancelSelect"
+  >
     <div class="flex-1 relative bg-[#000000] flex items-center justify-center overflow-hidden">
-       <Player :containerSize="containerSize" />
+      <Player :containerSize="containerSize" />
     </div>
   </div>
 </template>

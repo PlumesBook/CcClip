@@ -32,18 +32,11 @@
   import TransitionIcon from '@/components/icons/TransitionIcon.vue';
   import FilterIcon from '@/components/icons/FilterIcon.vue';
   import { TrackHeightMap } from '@/data/trackConfig';
-  const props = defineProps({
-    listData: {
-      type: Array,
-      default() {
-        return [];
-      }
-    },
-    offsetTop: {
-      type: Number,
-      default: 0
-    }
-  });
+
+  const props = defineProps<{
+    listData: Array<{ type: string; main?: boolean }>;
+    offsetTop: number;
+  }>();
   const componentMap = new Map([
     ['video', VideoIcon],
     ['audio', AudioIcon],

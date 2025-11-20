@@ -44,13 +44,17 @@
   // 将data下的配置导入
   const attributeFiles = import.meta.glob('@/data/options/*.ts', { eager: true });
   for (const path in attributeFiles) {
-    const name = path.match(/(?<=\/)(\w+)(?=\.ts)/) || [];
-    TrackOptionsConfig[name[0]] = (attributeFiles[path] as { Options: Record<string, any> }).Options;
+    // 匹配末尾的文件名： /xxx/Video.ts -> Video
+    const match = path.match(/\/(\w+)\.ts$/);
+    if (!match) continue;
+    const name = match[1];
+    TrackOptionsConfig[name] = (attributeFiles[path] as { Options: Record<string, any> }).Options;
   }
 
   const selectTrackOptionsConfig = computed(() => {
-    if (!trackStore.selectResource) return [];
-    const optionsConfig = TrackOptionsConfig[trackStore.selectResource.type];
+    const resource = trackStore.selectResource;
+    if (!resource || !resource.type) return [];
+    const optionsConfig = TrackOptionsConfig[resource.type];
     return optionsConfig ? optionsConfig.attributes : [];
   });
   const attrWidth = computed(() => ({
