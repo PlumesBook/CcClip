@@ -22,24 +22,52 @@
     <!-- 右键菜单 -->
     <div
       v-if="showMenu"
-      class="fixed z-50 bg-white dark:bg-gray-800 border dark:border-gray-600 border-gray-200 rounded shadow-lg py-1 text-xs w-24"
+      class="fixed z-50 bg-white dark:bg-gray-800 border dark:border-gray-600 border-gray-200 rounded shadow-lg py-1 text-xs w-32"
       :style="{ left: `${menuPos.x}px`, top: `${menuPos.y}px` }"
       @click.stop
     >
+      <template v-if="canReplace">
+        <div
+          class="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex justify-between items-center"
+          @click="handleReplaceClick"
+        >
+          <span>本地替换</span>
+          <el-icon><FolderOpened /></el-icon>
+        </div>
+        <div
+          class="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex justify-between items-center"
+          @click="openResourceDialog"
+        >
+          <span>素材库替换</span>
+          <el-icon><Box /></el-icon>
+        </div>
+        <div
+          class="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex justify-between items-center opacity-50 cursor-not-allowed"
+          title="开发中"
+        >
+          <span>AI 生成</span>
+          <el-icon><MagicStick /></el-icon>
+        </div>
+        <div class="h-[1px] bg-gray-200 dark:bg-gray-700 my-1"></div>
+      </template>
+      
       <div
-        v-if="canReplace"
-        class="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-        @click="handleReplaceClick"
-      >
-        替换
-      </div>
-      <div
-          class="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-red-500"
+          class="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-red-500 flex justify-between items-center"
           @click="handleDelete"
       >
-        删除
+        <span>删除</span>
+        <el-icon><Delete /></el-icon>
       </div>
     </div>
+    
+    <!-- 资源选择弹窗 -->
+    <ResourceSelectDialog
+      v-if="canReplace"
+      v-model="showResourceDialog"
+      :resource-type="trackItem.type"
+      @select="handleResourceSelect"
+    />
+
     <!-- 隐藏的文件输入框 -->
     <input
       ref="fileInput"
@@ -53,6 +81,7 @@
 </template>
 
 <script setup lang="ts">
+  import { FolderOpened, Box, MagicStick, Delete } from '@element-plus/icons-vue';
   import TrackHandler from '@/components/item/trackItem/TrackHandler.vue';
   import VideoItem from '@/components/item/trackItem/template/VideoItem.vue';
   import AudioItem from '@/components/item/trackItem/template/AudioItem.vue';
@@ -67,6 +96,7 @@
   import { createVideoResourceFromFile, createImageResourceFromFile } from '@/utils/fileResourceUtils';
   import { saveUploadResource } from '@/utils/uploadStore';
   import type FFManager from '@/utils/ffmpegManager';
+  import ResourceSelectDialog from '@/components/dialog/ResourceSelectDialog.vue';
 
   const props = defineProps({
     trackType: {
@@ -123,6 +153,7 @@
 
   // 右键菜单逻辑
   const showMenu = ref(false);
+  const showResourceDialog = ref(false);
   const menuPos = ref({ x: 0, y: 0 });
   const fileInput = ref<HTMLInputElement | null>(null);
 
@@ -181,6 +212,29 @@
       fileInput.value.click();
     }
     showMenu.value = false;
+  }
+
+  function openResourceDialog() {
+    showMenu.value = false;
+    showResourceDialog.value = true;
+  }
+
+  function handleResourceSelect(resource: any) {
+    showResourceDialog.value = false;
+    
+    const newTrackItem = {
+      ...resource,
+      type: props.trackItem.type,
+      source: resource.source, 
+      cover: resource.cover
+    };
+
+    // 如果是用户上传的素材，需要保留 uploadId，以便后续从 DB 恢复
+    if (resource._isUpload) {
+      newTrackItem.uploadId = resource.id;
+    }
+    
+    store.replaceTrack(props.lineIndex, props.itemIndex, newTrackItem);
   }
 
   function handleDelete() {

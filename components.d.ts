@@ -65,6 +65,7 @@ declare module '@vue/runtime-core' {
     PlayerMoveable: typeof import('./src/components/item/player/PlayerMoveable.vue')['default']
     RedoIcon: typeof import('./src/components/icons/RedoIcon.vue')['default']
     ResourcesContainer: typeof import('./src/components/container/ResourcesContainer.vue')['default']
+    ResourceSelectDialog: typeof import('./src/components/dialog/ResourceSelectDialog.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SplitIcon: typeof import('./src/components/icons/SplitIcon.vue')['default']
