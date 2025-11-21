@@ -55,6 +55,7 @@
 <script setup lang="ts">
   import { ref, computed, inject, reactive } from 'vue';
   import type FFManager from '@/utils/ffmpegManager';
+  import { createVideoResourceFromFile, createAudioResourceFromFile, createImageResourceFromFile, type ResourceSource } from '@/utils/fileResourceUtils';
   import AudioResourceItem from '@/components/item/resourcesItem/AudioResourceItem.vue';
   import OtherResource from '@/components/item/resourcesItem/OtherResource.vue';
   import VideoIcon from '@/components/icons/VideoIcon.vue';
@@ -150,14 +151,41 @@
     Array.from(files).forEach(file => {
       if (props.type === 'video') {
         if (!file.type.startsWith('video/')) return;
-        createVideoResourceFromFile(file);
+        processFileWithProgress(file, 'video', createVideoResourceFromFile);
       } else if (props.type === 'audio') {
         if (!file.type.startsWith('audio/')) return;
-        createAudioResourceFromFile(file);
+        processFileWithProgress(file, 'audio', createAudioResourceFromFile);
       } else if (props.type === 'image') {
-        if (file.type !== 'image/gif') return;
-        createImageResourceFromFile(file);
+        if (file.type !== 'image/gif' && !file.type.startsWith('image/')) return;
+        processFileWithProgress(file, 'image', (f) => createImageResourceFromFile(f, ffmpeg));
       }
+    });
+  }
+
+  function processFileWithProgress(
+    file: File, 
+    type: string, 
+    processor: (f: File) => Promise<ResourceSource>
+  ) {
+    const placeholder = { type, name: file.name, progress: 0 };
+    uploadingItems.push(placeholder);
+    const timer = startProgress(placeholder);
+    
+    processor(file).then(data => {
+       placeholder.progress = 100;
+       setTimeout(() => {
+         emit('upload', {
+           ...data,
+           groupTitle: (props.listData as any)?.title
+         });
+         clearInterval(timer);
+         const index = uploadingItems.indexOf(placeholder);
+         if (index > -1) uploadingItems.splice(index, 1);
+       }, 200);
+    }).catch(() => {
+       clearInterval(timer);
+       const index = uploadingItems.indexOf(placeholder);
+       if (index > -1) uploadingItems.splice(index, 1);
     });
   }
 
@@ -171,217 +199,4 @@
     return interval;
   }
 
-  function createVideoResourceFromFile(file: File) {
-    const placeholder = { type: 'video', name: file.name, progress: 0 };
-    uploadingItems.push(placeholder);
-    const timer = startProgress(placeholder);
-    const removePlaceholder = () => {
-      clearInterval(timer);
-      const index = uploadingItems.indexOf(placeholder);
-      if (index > -1) uploadingItems.splice(index, 1);
-    };
-
-    const url = URL.createObjectURL(file);
-    const video = document.createElement('video');
-    video.preload = 'metadata';
-    video.src = url;
-    video.onloadedmetadata = () => {
-      const duration = video.duration || 0;
-      const width = video.videoWidth || 320;
-      const height = video.videoHeight || 180;
-      const fps = 30;
-      const frameCount = Math.max(1, Math.round(duration * fps));
-      const time = Math.max(1, Math.round(duration * 1000));
-      const baseName = getBaseName(file.name);
-      const format = getFormat(file.name);
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      const emitItem = (cover: string) => {
-        placeholder.progress = 100;
-        setTimeout(() => {
-            emit('upload', {
-            name: baseName,
-            format,
-            cover,
-            source: url,
-            width,
-            height,
-            fps,
-            frameCount,
-            time,
-            file,
-            groupType: props.type,
-            groupTitle: (props.listData as any)?.title
-            });
-            removePlaceholder();
-        }, 200);
-      };
-      if (ctx) {
-        const capture = () => {
-          try {
-            ctx.drawImage(video, 0, 0, width, height);
-            const cover = canvas.toDataURL('image/png');
-            emitItem(cover);
-          } catch (e) {
-            emitItem('');
-          }
-        };
-        if (duration > 0) {
-          video.currentTime = Math.min(0.1, duration - 0.1);
-          video.onseeked = () => capture();
-        } else {
-          capture();
-        }
-      } else {
-        emitItem('');
-      }
-    };
-    video.onerror = () => {
-      removePlaceholder();
-    };
-  }
-
-  function createAudioResourceFromFile(file: File) {
-    const placeholder = { type: 'audio', name: file.name, progress: 0 };
-    uploadingItems.push(placeholder);
-    const timer = startProgress(placeholder);
-    const removePlaceholder = () => {
-      clearInterval(timer);
-      const index = uploadingItems.indexOf(placeholder);
-      if (index > -1) uploadingItems.splice(index, 1);
-    };
-
-    const url = URL.createObjectURL(file);
-    const audio = document.createElement('audio');
-    audio.preload = 'metadata';
-    audio.src = url;
-    audio.onloadedmetadata = () => {
-      const duration = audio.duration || 0;
-      const time = Math.max(1, Math.round(duration * 1000));
-      const baseName = getBaseName(file.name);
-      const format = getFormat(file.name);
-      const emitItem = () => {
-        placeholder.progress = 100;
-        setTimeout(() => {
-            emit('upload', {
-            name: baseName,
-            format,
-            cover: '',
-            source: url,
-            width: 0,
-            height: 0,
-            fps: 0,
-            frameCount: 0,
-            time,
-            file,
-            groupType: props.type,
-            groupTitle: (props.listData as any)?.title
-            });
-            removePlaceholder();
-        }, 200);
-      };
-      emitItem();
-    };
-    audio.onerror = () => {
-      removePlaceholder();
-    };
-  }
-
-  function createImageResourceFromFile(file: File) {
-    const placeholder = { type: 'image', name: file.name, progress: 0 };
-    uploadingItems.push(placeholder);
-    const timer = startProgress(placeholder);
-    const removePlaceholder = () => {
-      clearInterval(timer);
-      const index = uploadingItems.indexOf(placeholder);
-      if (index > -1) uploadingItems.splice(index, 1);
-    };
-
-    const url = URL.createObjectURL(file);
-    const image = new Image();
-    image.onload = async () => {
-      const width = image.width || 320;
-      const height = image.height || 180;
-      // 图片轨道时长与接口图片保持一致，由 formatTrackItemData 统一按 time 计算 frameCount
-      let time = 2000;
-      let fps = 0;
-      let frameCount = 0;
-      const baseName = getBaseName(file.name);
-      const format = getFormat(file.name);
-      let sourceFrame = 1;
-
-      // 处理 GIF 动图
-      if (format.toLowerCase() === 'gif' && ffmpeg && ffmpeg.isLoaded.value) {
-        try {
-          const fileName = `${baseName}.${format}`;
-          await ffmpeg.writeFile(ffmpeg.pathConfig.resourcePath, fileName, url);
-          await ffmpeg.genFrame(baseName, format, { w: width, h: height });
-          // 读取帧目录
-          const frameDir = `${ffmpeg.pathConfig.framePath}${baseName}`;
-          const files = ffmpeg.readDir(frameDir);
-          // 过滤出 gif-x 格式的文件
-          const frames = files.filter((f: string) => f.startsWith('gif-'));
-          if (frames.length > 1) {
-            frameCount = frames.length;
-            sourceFrame = frames.length;
-            fps = 10; // GIF 默认 10fps
-            time = frameCount * 100; // 时长 = 帧数 * 100ms
-          }
-        } catch (e) {
-          console.error('GIF 解析失败', e);
-        }
-      }
-
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      let cover = url;
-      if (ctx) {
-        try {
-          ctx.drawImage(image, 0, 0, width, height);
-          cover = canvas.toDataURL('image/png');
-        } catch (e) {
-          // ignore, fallback to gif url
-        }
-      }
-      placeholder.progress = 100;
-      setTimeout(() => {
-          emit('upload', {
-            name: baseName,
-            format,
-            cover,
-            source: url,
-            width,
-            height,
-            fps,
-            frameCount,
-            time,
-            sourceFrame,
-            file,
-            groupType: props.type,
-            groupTitle: (props.listData as any)?.title
-          });
-          removePlaceholder();
-      }, 200);
-    };
-    image.onerror = () => {
-      removePlaceholder();
-    };
-    image.src = url;
-  }
-
-  function getBaseName(fileName: string) {
-    const dotIndex = fileName.lastIndexOf('.');
-    if (dotIndex === -1) return fileName;
-    return fileName.slice(0, dotIndex);
-  }
-
-  function getFormat(fileName: string) {
-    const dotIndex = fileName.lastIndexOf('.');
-    if (dotIndex === -1) return 'mp4';
-    return fileName.slice(dotIndex + 1);
-  }
 </script>

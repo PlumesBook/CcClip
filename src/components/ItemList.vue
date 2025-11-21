@@ -131,6 +131,20 @@ class="flex flex-col transition-all duration-200 overflow-x-hidden border-r dark
     mergeLocalUploads();
   });
 
+  // 监听全局上传事件，自动刷新列表
+  function handleGlobalUpload() {
+    mergeLocalUploads();
+  }
+  // 在组件挂载时添加监听
+  const onGlobalUpload = () => handleGlobalUpload();
+  import { onMounted, onUnmounted } from 'vue';
+  onMounted(() => {
+    window.addEventListener('cc-upload-success', onGlobalUpload);
+  });
+  onUnmounted(() => {
+    window.removeEventListener('cc-upload-success', onGlobalUpload);
+  });
+
   const title = computed(() => props.title);
   const collapse = ref(props.defaultCollapse);
   function switchCollapse() {

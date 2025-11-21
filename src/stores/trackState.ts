@@ -2,8 +2,9 @@ import { ref, watchEffect, reactive, computed } from 'vue';
 import { defineStore } from 'pinia';
 import { checkTrackListOverlap } from '@/utils/storeUtil';
 import { useTrackAttrState } from '@/stores/trackAttribute';
-import { getJsonParse } from '@/utils/common';
+import { getJsonParse, getId } from '@/utils/common';
 import { getUploadResources, type UploadStoreRecord } from '@/utils/uploadStore';
+import { usePlayerState } from '@/stores/playerState';
 
 export type TrackType = 'video' | 'audio' | 'text' | 'image' | 'effect' | 'transition' | 'filter';
 interface BaseTractItem {
@@ -285,6 +286,71 @@ export const useTrackState = defineStore('trackState', () => {
     attrStore.initTrackAttr(item.id);
   }
 
+  function replaceTrack(lineIndex: number, itemIndex: number, newResource: TrackItem) {
+    const line = trackList[lineIndex];
+    if (!line || !line.list[itemIndex]) return;
+    const oldItem = line.list[itemIndex];
+
+    // 类型检查：只能 Video/Image 互转，Audio 转 Audio
+    const isVideoType = ['video', 'image'].includes(oldItem.type);
+    const isNewVideoType = ['video', 'image'].includes(newResource.type);
+    
+    if (isVideoType !== isNewVideoType) return;
+    if (oldItem.type === 'audio' && newResource.type !== 'audio') return;
+
+    // 保留原有属性
+    const { id, start, end, type: oldType } = oldItem;
+    const duration = end - start;
+    
+    // 计算新时长
+    let newEnd = end;
+    let newOffsetL = 0;
+    let newOffsetR = 0;
+
+    // 强制类型转换为 any 以访问 time，或者断言为 VideoTractItem
+    const resourceTime = (newResource as any).time || 3000;
+
+    if (resourceTime < duration) {
+      newEnd = start + resourceTime;
+    } else {
+      // 如果新素材足够长，保持原有时长，不做裁剪（offsetL=0）
+      newOffsetR = resourceTime - duration;
+    }
+
+    // 核心变更：模拟“移除旧的，添加新的”逻辑
+    // 1. 清理旧的属性 (AttrStore)
+    attrStore.deleteTrack(id);
+
+    // 2. 生成新的 ID
+    const newId = getId();
+
+    // 3. 初始化新 ID 的属性
+    attrStore.initTrackAttr(newId);
+
+    // 更新属性
+    const newItem = {
+      ...oldItem,
+      ...newResource,
+      id: newId, // 使用新生成的 ID
+      start,
+      end: newEnd,
+      offsetL: newOffsetL,
+      offsetR: newOffsetR,
+      type: newResource.type
+    };
+
+    // 替换 (这等同于在原位移除并添加)
+    trackList[lineIndex].list.splice(itemIndex, 1, newItem);
+    
+    // 强制更新选中状态，指向新 ID
+    selectTrackById(newId);
+
+    // 触发播放器重新计算
+    const playerStore = usePlayerState();
+    playerStore.existVideo = false; 
+    // 不需要额外的 hack 了，因为 ID 变了，对于 Player 来说就是全新的元素，会自动重绘
+  }
+
   watchEffect(() => {
     localStorage.trackS = trackScale.value;
   });
@@ -298,6 +364,7 @@ export const useTrackState = defineStore('trackState', () => {
     trackScale,
     trackList,
     addTrack,
+    replaceTrack,
     selectTrackById,
     removeTrack,
     dragData

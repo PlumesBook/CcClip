@@ -76,12 +76,18 @@
       let marginSpace = Math.max(Math.round((offset / frameStep)), 0); // 帧数不够填满容器时的间距
       let frameIndex = props.trackItem.offsetL + 1; // 开始下标
       for (let i = 0; i < maxFrame; i++) {
-        const blobFrame = ffmpeg.getFrame(props.trackItem.name, frameIndex);
-        ((index, margin) => {
-          createImageBitmap(blobFrame).then(imageBitmap => {
-            drawBitmap(imageBitmap, index, margin);
-          });
-        })(i, marginSpace);
+        try {
+          const blobFrame = ffmpeg.getFrame(props.trackItem.name, frameIndex);
+          ((index, margin) => {
+            createImageBitmap(blobFrame).then(imageBitmap => {
+              drawBitmap(imageBitmap, index, margin);
+            }).catch(() => {
+                // ignore
+            });
+          })(i, marginSpace);
+        } catch (e) {
+          // ignore frame error
+        }
         frameIndex = Math.min(frameIndex + renderSpace, frameCount);
         if (overFrame > 0) {
           frameIndex += 1;

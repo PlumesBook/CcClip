@@ -40,7 +40,6 @@
     }
   });
   const store = usePlayerState();
-  store.ingLoadingCount++;
   const container = ref();
   const ffmpeg = inject('ffmpeg') as FFManager;
   const loading = ref(true);
@@ -59,20 +58,25 @@
   async function initVideo() {
     const { name, source, format, frameCount, width, height } = props.trackItem;
     if (name && source && ffmpeg.isLoaded.value) {
-      const videoName = `${name}.${format}`;
-      // 写文件
-      await ffmpeg.writeFile(ffmpeg.pathConfig.resourcePath, videoName, source);
-      // 分离音频
-      await ffmpeg.splitAudio(name, format);
-      // 视频抽帧
-      await ffmpeg.genFrame(name, format, {
-        w: width,
-        h: height
-      });
-      await ffmpeg.genWave(name, frameCount);
-      waveFileUrl.value = ffmpeg.getWavePng(name);
-      loading.value = false;
-      store.ingLoadingCount--;
+      loading.value = true;
+      store.ingLoadingCount++;
+      try {
+        const videoName = `${name}.${format}`;
+        // 写文件
+        await ffmpeg.writeFile(ffmpeg.pathConfig.resourcePath, videoName, source);
+        // 分离音频
+        await ffmpeg.splitAudio(name, format);
+        // 视频抽帧
+        await ffmpeg.genFrame(name, format, {
+          w: width,
+          h: height
+        });
+        await ffmpeg.genWave(name, frameCount);
+        waveFileUrl.value = ffmpeg.getWavePng(name);
+      } finally {
+        loading.value = false;
+        store.ingLoadingCount--;
+      }
     }
   }
   watch(() => {

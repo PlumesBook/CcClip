@@ -124,19 +124,32 @@ export class CanvasPlayer {
                 resolve(true);
             } else if (isVideo(type)) {
                 const frame = Math.max(frameIndex - start + offsetL, 1); // 默认展示首帧
-                const blobFrame = this.ffmpeg.getFrame(name, frame);
-                createImageBitmap(blobFrame as Blob).then(imageBitmap => {
-                    this.renderContext?.drawImage(imageBitmap, 0, 0, sourceWidth, sourceHeight, drawL, drawT, drawW, drawH);
+                try {
+                    const blobFrame = this.ffmpeg.getFrame(name, frame);
+                    createImageBitmap(blobFrame as Blob).then(imageBitmap => {
+                        this.renderContext?.drawImage(imageBitmap, 0, 0, sourceWidth, sourceHeight, drawL, drawT, drawW, drawH);
+                        resolve(true);
+                    }).catch(() => {
+                        resolve(true);
+                    });
+                } catch (e) {
+                    // 帧文件可能尚未生成
                     resolve(true);
-                });
+                }
             } else if (type === 'image') {
                 const frame = Math.max(frameIndex - start, 1); // 默认展示首帧
                 const showFrame = frame % sourceFrame;
-                const blobFrame = this.ffmpeg.getGifFrame(name, showFrame === 0 ? sourceFrame : showFrame);
-                createImageBitmap(blobFrame as Blob).then(imageBitmap => {
-                    this.renderContext?.drawImage(imageBitmap, 0, 0, sourceWidth, sourceHeight, drawL, drawT, drawW, drawH);
+                try {
+                    const blobFrame = this.ffmpeg.getGifFrame(name, showFrame === 0 ? sourceFrame : showFrame);
+                    createImageBitmap(blobFrame as Blob).then(imageBitmap => {
+                        this.renderContext?.drawImage(imageBitmap, 0, 0, sourceWidth, sourceHeight, drawL, drawT, drawW, drawH);
+                        resolve(true);
+                    }).catch(() => {
+                        resolve(true);
+                    });
+                } catch (e) {
                     resolve(true);
-                });
+                }
             } else if (type === 'text') {
                 let { text, color, fontSize } = this.attrStore.trackAttrMap[id];
                 if (this.renderContext) {

@@ -4,13 +4,50 @@
       :class="[TrackHeightMap.get(props.trackItem.type), isDragState ? 'opacity-30' : '']"
       :style="itemClass"
       @click="setSelectTract"
+      @contextmenu.prevent.stop="handleContextMenu"
   >
     <!-- 操作手柄 -->
-    <TrackHandler :isActive="isActive" :lineIndex="lineIndex" :itemIndex="itemIndex" />
+    <TrackHandler 
+      :isActive="isActive" 
+      :lineIndex="lineIndex" 
+      :itemIndex="itemIndex" 
+      @contextmenu.prevent.stop="handleContextMenu"
+    />
     <!-- 容器 -->
     <component
         :is="componentMap.get(trackItem.type)"
         :trackItem="trackItem"
+        @contextmenu.prevent.stop="handleContextMenu"
+    />
+    <!-- 右键菜单 -->
+    <div
+      v-if="showMenu"
+      class="fixed z-50 bg-white dark:bg-gray-800 border dark:border-gray-600 border-gray-200 rounded shadow-lg py-1 text-xs w-24"
+      :style="{ left: `${menuPos.x}px`, top: `${menuPos.y}px` }"
+      @click.stop
+    >
+      <div
+        v-if="canReplace"
+        class="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+        @click="handleReplaceClick"
+      >
+        替换
+      </div>
+      <div
+          class="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-red-500"
+          @click="handleDelete"
+      >
+        删除
+      </div>
+    </div>
+    <!-- 隐藏的文件输入框 -->
+    <input
+      ref="fileInput"
+      type="file"
+      class="hidden"
+      :accept="acceptType"
+      @click.stop
+      @change="handleFileChange"
     />
   </div>
 </template>
@@ -26,7 +63,11 @@
   import FilterItem from '@/components/item/trackItem/template/FilterItem.vue';
   import { TrackHeightMap } from '@/data/trackConfig';
   import { useTrackState } from '@/stores/trackState';
-  import { computed } from 'vue';
+  import { computed, ref, inject, onMounted, onUnmounted } from 'vue';
+  import { createVideoResourceFromFile, createImageResourceFromFile } from '@/utils/fileResourceUtils';
+  import { saveUploadResource } from '@/utils/uploadStore';
+  import type FFManager from '@/utils/ffmpegManager';
+
   const props = defineProps({
     trackType: {
       type: String,
@@ -51,6 +92,7 @@
     }
   });
   const store = useTrackState();
+  const ffmpeg = inject('ffmpeg') as FFManager;
   const itemClass = computed(() => {
     return {
       width: props.trackItem.showWidth,
@@ -77,5 +119,116 @@
     event.stopPropagation();
     store.selectTrackItem.line = props.lineIndex;
     store.selectTrackItem.index = props.itemIndex;
+  }
+
+  // 右键菜单逻辑
+  const showMenu = ref(false);
+  const menuPos = ref({ x: 0, y: 0 });
+  const fileInput = ref<HTMLInputElement | null>(null);
+
+  const canReplace = computed(() => {
+    return ['video', 'image'].includes(props.trackItem.type);
+  });
+
+  const acceptType = computed(() => {
+    return props.trackItem.type === 'video' ? 'video/*' : 'image/*';
+  });
+
+  // 全局关闭逻辑
+  function closeSelf() {
+    showMenu.value = false;
+    window.removeEventListener('click', closeMenuHandler);
+    window.removeEventListener('contextmenu', closeMenuHandler);
+  }
+
+  function closeMenuHandler() {
+    closeSelf();
+  }
+
+  function handleContextMenu(event: MouseEvent) {
+    // 1. 广播关闭信号
+    window.dispatchEvent(new Event('cc-close-context-menu'));
+
+    // 选中当前素材
+    setSelectTract(event);
+    
+    showMenu.value = true;
+    menuPos.value = {
+      x: event.clientX,
+      y: event.clientY
+    };
+    
+    // 延迟添加监听
+    setTimeout(() => {
+      window.addEventListener('click', closeMenuHandler);
+      window.addEventListener('contextmenu', closeMenuHandler);
+    }, 0);
+  }
+
+  onMounted(() => {
+    window.addEventListener('cc-close-context-menu', closeSelf);
+  });
+
+  onUnmounted(() => {
+    window.removeEventListener('cc-close-context-menu', closeSelf);
+    window.removeEventListener('click', closeMenuHandler);
+    window.removeEventListener('contextmenu', closeMenuHandler);
+  });
+
+  function handleReplaceClick() {
+    console.log('Replace clicked', fileInput.value);
+    if (fileInput.value) {
+      fileInput.value.click();
+    }
+    showMenu.value = false;
+  }
+
+  function handleDelete() {
+    showMenu.value = false;
+    store.removeTrack(props.lineIndex, props.itemIndex);
+  }
+
+  async function handleFileChange(event: Event) {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (!file) return;
+
+    try {
+      let resource;
+      if (props.trackItem.type === 'video') {
+        resource = await createVideoResourceFromFile(file, 'video');
+      } else if (props.trackItem.type === 'image') {
+        resource = await createImageResourceFromFile(file, ffmpeg, 'image');
+      }
+
+      if (resource) {
+        // 1. 保存到 UploadStore (模拟上传)
+        const { id } = await saveUploadResource({
+          activeKey: props.trackItem.type, // 简单归类
+          groupType: props.trackItem.type,
+          groupTitle: '用户上传',
+          ...resource
+        });
+        
+        // 广播上传成功事件，通知左侧列表刷新
+        window.dispatchEvent(new Event('cc-upload-success'));
+
+        // 2. 替换轨道
+        // 构造 TrackItem 数据，注意这里复用了 resource 的数据
+        const newTrackItem = {
+          ...resource,
+          type: props.trackItem.type,
+          uploadId: id, // 关联上传记录
+          source: resource.source,
+          cover: resource.cover
+        };
+        
+        store.replaceTrack(props.lineIndex, props.itemIndex, newTrackItem as any);
+      }
+    } catch (e) {
+      console.error('Replace failed', e);
+    } finally {
+      target.value = '';
+    }
   }
 </script>
