@@ -355,7 +355,22 @@ export const useTrackState = defineStore('trackState', () => {
     localStorage.trackS = trackScale.value;
   });
   watchEffect(() => {
-    localStorage.trackList = JSON.stringify(trackList);
+    // 存储前精简数据，避免 QuotaExceededError
+    // 如果有 uploadId，则不存储 source 和 cover (图片)，因为可以从 IndexedDB 恢复
+    const listToSave = trackList.map(line => ({
+      ...line,
+      list: line.list.map(item => {
+        if (['video', 'audio', 'image'].includes(item.type) && (item as any).uploadId) {
+          return {
+            ...item,
+            source: '',
+            cover: item.type === 'image' ? '' : (item as any).cover // 视频封面通常较小，图片封面可能是原图 Base64
+          };
+        }
+        return item;
+      })
+    }));
+    localStorage.trackList = JSON.stringify(listToSave);
   });
   return {
     moveTrackData,
