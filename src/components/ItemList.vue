@@ -100,6 +100,11 @@ class="flex flex-col transition-all duration-200 overflow-x-hidden border-r dark
       if (!Array.isArray(target.items)) {
         target.items = [];
       }
+      
+      // 避免重复添加：先检查是否已存在该 uploadId
+      const exists = target.items.some((item: any) => item.uploadId === record.id);
+      if (exists) return;
+
       let source = urlMap.get(record.id);
       if (!source) {
         source = URL.createObjectURL(record.file);
