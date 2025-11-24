@@ -41,6 +41,7 @@ declare module '@vue/runtime-core' {
     ElSwitch: typeof import('element-plus/es')['ElSwitch']
     ElTabPane: typeof import('element-plus/es')['ElTabPane']
     ElTabs: typeof import('element-plus/es')['ElTabs']
+    ElTag: typeof import('element-plus/es')['ElTag']
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
     EmptyAttrIcon: typeof import('./src/components/icons/EmptyAttrIcon.vue')['default']
     FilterIcon: typeof import('./src/components/icons/FilterIcon.vue')['default']

@@ -1,91 +1,126 @@
 <template>
-  <el-dialog
-    v-model="visible"
-    :title="`选择${typeName}素材进行替换`"
-    width="70%"
-    class="resource-select-dialog"
-    destroy-on-close
-    :close-on-click-modal="false"
-    append-to-body
-    @close="handleClose"
-  >
-    <el-tabs v-model="activeTab" @tab-change="handleTabChange">
-      <el-tab-pane label="系统推荐" name="system"></el-tab-pane>
-      <el-tab-pane label="我的上传" name="user"></el-tab-pane>
-    </el-tabs>
-
-    <div class="h-[400px] overflow-y-auto p-2" v-loading="loading">
-      <!-- 空状态 -->
-      <div v-if="!loading && list.length === 0" class="h-full flex flex-col items-center justify-center text-gray-400">
-        <el-icon :size="48"><Files /></el-icon>
-        <span class="mt-2">暂无相关素材</span>
+  <el-dialog v-model="visible" :title="dialogTitle" width="960px" top="8vh"
+    class="resource-select-dialog cc-dark-dialog" destroy-on-close :close-on-click-modal="false" append-to-body
+    @close="handleClose">
+    <div class="flex h-[600px] bg-[#181818] text-[#e0e0e0] overflow-hidden rounded-lg border border-[#333]">
+      <!-- Left Sidebar -->
+      <div class="w-[200px] flex-shrink-0 bg-[#1f1f1f] border-r border-[#2a2a2a] flex flex-col py-4">
+        <div class="px-4 mb-4">
+          <span class="text-xs font-bold text-[#666] uppercase tracking-wider">分类</span>
+        </div>
+        <div class="flex-1 overflow-y-auto custom-scrollbar px-2 space-y-1">
+          <div v-for="(cat, index) in categories" :key="index"
+            class="cursor-pointer px-3 py-2.5 rounded-md text-sm flex items-center gap-3 transition-all duration-200 select-none"
+            :class="activeCategoryIndex === index ? 'bg-[#333] text-white font-medium' : 'text-[#999] hover:bg-[#2a2a2a] hover:text-[#ccc]'"
+            @click="handleCategoryClick(index)">
+            <el-icon :size="16" :class="activeCategoryIndex === index ? 'text-primary-400' : 'text-[#666]'">
+              <component :is="getCategoryIcon(cat.type)" />
+            </el-icon>
+            <span class="truncate">{{ cat.title }}</span>
+            <span class="ml-auto text-xs text-[#555]" v-if="cat.items?.length">{{ cat.items.length }}</span>
+          </div>
+        </div>
       </div>
 
-      <!-- 列表 -->
-      <div class="grid grid-cols-4 gap-4">
-        <div
-          v-for="(item, index) in list"
-          :key="index"
-          class="relative group cursor-pointer rounded-lg overflow-hidden border-2 transition-all duration-200 bg-gray-50 dark:bg-gray-800"
-          :class="selectedItem === item ? 'border-blue-500 ring-2 ring-blue-200' : 'border-transparent hover:border-gray-300 dark:hover:border-gray-600'"
-          @click="selectItem(item)"
-          @dblclick="handleDbClick(item)"
-        >
-          <!-- 封面 -->
-          <div class="aspect-video bg-gray-100 dark:bg-gray-800 relative">
-            <img 
-              :src="item.cover" 
-              class="w-full h-full object-cover select-none block"
-              loading="lazy"
-            />
-            <!-- 视频时长角标 -->
-            <span v-if="resourceType === 'video'" class="absolute bottom-1 right-1 text-xs text-white bg-black bg-opacity-50 px-1 rounded scale-90 origin-bottom-right">
-              {{ formatTimeStr(item.time) }}
-            </span>
+      <!-- Right Content -->
+      <div class="flex-1 flex flex-col bg-[#181818] min-w-0">
+        <!-- Top Bar -->
+        <div class="h-16 border-b border-[#2a2a2a] flex items-center px-6 gap-4 justify-between bg-[#181818]">
+          <div class="text-lg font-medium text-white">{{ currentCategory?.title || '全部素材' }}</div>
+
+          <div class="flex items-center gap-3">
+            <div class="relative w-64">
+              <el-input v-model="searchQuery" placeholder="搜索素材名称..." prefix-icon="Search" class="cc-search-input"
+                clearable @input="handleSearch" />
+            </div>
           </div>
-          
-          <!-- 名称 -->
-          <div class="p-2">
-            <p class="text-xs truncate text-gray-700 dark:text-gray-200" :title="item.name">{{ item.name }}</p>
+        </div>
+
+        <!-- Grid Area -->
+        <div class="flex-1 overflow-y-auto p-5 custom-scrollbar relative" v-loading="loading"
+          element-loading-background="rgba(24, 24, 24, 0.8)">
+
+          <!-- Empty State -->
+          <div v-if="!filteredList.length && !loading"
+            class="absolute inset-0 flex flex-col items-center justify-center text-[#666]">
+            <el-icon :size="64" class="mb-4 opacity-50">
+              <Box />
+            </el-icon>
+            <p class="text-sm">暂无相关素材</p>
           </div>
 
-          <!-- 选中标记 -->
-          <div v-if="selectedItem === item" class="absolute top-1 right-1 bg-blue-500 text-white rounded-full p-0.5 shadow-sm">
-            <el-icon :size="12"><Check /></el-icon>
+          <!-- Grid -->
+          <div v-else class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            <div v-for="(item, idx) in filteredList" :key="idx"
+              class="group relative aspect-video bg-[#252525] rounded-lg overflow-hidden cursor-pointer border border-transparent transition-all duration-200 hover:border-[#444]"
+              :class="isItemSelected(item) ? 'ring-2 ring-[#00b894] ring-offset-1 ring-offset-[#181818]' : ''"
+              @click="selectItem(item)" @dblclick="handleDbClick(item)">
+              <!-- Thumbnail -->
+              <div class="w-full h-full overflow-hidden relative">
+                <img :src="item.cover || item.source"
+                  class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  loading="lazy" @error="handleImgError" />
+                <!-- Overlay -->
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"></div>
+              </div>
+
+              <!-- Duration Badge -->
+              <span v-if="item.time"
+                class="absolute bottom-1.5 right-1.5 text-[10px] font-mono text-white bg-black/60 backdrop-blur-sm px-1.5 py-0.5 rounded">
+                {{ formatTimeStr(item.time) }}
+              </span>
+
+              <!-- Hover Title -->
+              <div
+                class="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end">
+                <p class="text-xs text-white truncate drop-shadow-md">{{ item.name }}</p>
+                <p class="text-[10px] text-[#ccc] truncate scale-90 origin-left mt-0.5">{{ item.width }}x{{ item.height
+                  }}</p>
+              </div>
+
+              <!-- Selected Check -->
+              <div v-if="isItemSelected(item)"
+                class="absolute top-1.5 right-1.5 bg-[#00b894] text-white rounded-full w-5 h-5 flex items-center justify-center shadow-lg animate-in zoom-in duration-200">
+                <el-icon :size="12">
+                  <Check />
+                </el-icon>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="h-16 border-t border-[#2a2a2a] flex items-center justify-between px-6 bg-[#1f1f1f]">
+          <div class="flex items-center text-xs text-[#888] gap-2">
+            <el-tag v-if="selectedItem" size="small" type="info" effect="dark"
+              class="bg-[#333] border-none text-[#ccc] max-w-[200px] truncate">
+              {{ selectedItem.name }}
+            </el-tag>
+            <span v-else>请选择一个素材进行替换</span>
+          </div>
+          <div class="flex gap-3">
+            <el-button @click="handleClose" class="cc-btn-secondary">取消</el-button>
+            <el-button type="primary" @click="confirmSelect" :disabled="!selectedItem" class="cc-btn-primary">
+              确认替换
+            </el-button>
           </div>
         </div>
       </div>
     </div>
-
-    <template #footer>
-      <span class="dialog-footer">
-        <el-button @click="handleClose">取消</el-button>
-        <el-button type="primary" @click="confirmSelect" :disabled="!selectedItem">
-          确认替换
-        </el-button>
-      </span>
-    </template>
   </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
-import { Files, Check } from '@element-plus/icons-vue';
+import { ref, computed, watch } from 'vue';
+import { Search, Box, Check, VideoPlay, Picture, Headset, Folder } from '@element-plus/icons-vue';
 import { getData } from '@/api/mock';
 import { getUploadResources } from '@/utils/uploadStore';
 import { formatTime } from '@/utils/common';
 
 const props = defineProps({
-  modelValue: {
-    type: Boolean,
-    default: false
-  },
-  resourceType: {
-    type: String,
-    default: 'video'
-  }
+  modelValue: { type: Boolean, default: false },
+  resourceType: { type: String, default: 'video' }
 });
-
 const emit = defineEmits(['update:modelValue', 'select']);
 
 const visible = computed({
@@ -93,60 +128,100 @@ const visible = computed({
   set: (val) => emit('update:modelValue', val)
 });
 
-const activeTab = ref('system');
 const loading = ref(false);
-const list = ref<any[]>([]);
+const categories = ref<any[]>([]);
+const activeCategoryIndex = ref(0);
+const searchQuery = ref('');
 const selectedItem = ref<any>(null);
 
-const typeName = computed(() => {
-  if (props.resourceType === 'video') return '视频';
-  if (props.resourceType === 'image') return '图片';
-  return '素材';
+const dialogTitle = computed(() => {
+  const map: Record<string, string> = { video: '视频', image: '图片', audio: '音频' };
+  return `替换${map[props.resourceType] || '素材'}`;
 });
 
-function formatTimeStr(time: number) {
-  if (!time) return '00:00';
-  const { str } = formatTime(time);
-  return str;
-}
+const currentCategory = computed(() => categories.value[activeCategoryIndex.value]);
+
+const filteredList = computed(() => {
+  if (!currentCategory.value?.items) return [];
+  const list = currentCategory.value.items;
+  if (!searchQuery.value) return list;
+
+  const q = searchQuery.value.toLowerCase();
+  return list.filter((item: any) =>
+    (item.name || '').toLowerCase().includes(q)
+  );
+});
 
 async function loadData() {
   loading.value = true;
-  list.value = [];
+  categories.value = [];
   selectedItem.value = null;
-  
+  searchQuery.value = '';
+  activeCategoryIndex.value = 0;
+
   try {
-    if (activeTab.value === 'system') {
-      // 系统推荐
-      const res = await getData(props.resourceType);
-      let rawList = [];
-      const data = (res as any).data; 
-      if (Array.isArray(data)) {
-        rawList = data;
-      } else if (data && Array.isArray(data.items)) {
-        rawList = data.items;
-      } else if (Array.isArray(res)) {
-        rawList = res;
-      }
-      list.value = rawList.map((item: any) => ({ ...item, _isUpload: false }));
-    } else {
-      // 我的上传
-      const res = await getUploadResources(props.resourceType);
-      list.value = res.map(item => ({ ...item, _isUpload: true }));
+    const [sysRes, uploads] = await Promise.all([
+      getData(props.resourceType),
+      getUploadResources(props.resourceType)
+    ]);
+
+    let groups: any[] = [];
+    const rawData = (sysRes as any).data || sysRes;
+    if (Array.isArray(rawData)) {
+      groups = JSON.parse(JSON.stringify(rawData));
+    } else if (rawData?.items) {
+      groups = JSON.parse(JSON.stringify(rawData.items));
     }
+
+    uploads.forEach(record => {
+      const target = groups.find((g: any) => g.type === record.groupType && g.title === record.groupTitle);
+      if (target) {
+        if (!target.items) target.items = [];
+        if (target.items.some((i: any) => i.uploadId === record.id)) return;
+
+        const source = URL.createObjectURL(record.file);
+        const isImageGroup = record.groupType === 'image';
+        const recordCover = record.cover || '';
+        const cover = isImageGroup
+          ? (recordCover.startsWith('blob:') ? source : recordCover || source)
+          : recordCover;
+
+        target.items.unshift({
+          name: record.name,
+          format: record.format,
+          cover,
+          source,
+          width: record.width,
+          height: record.height,
+          fps: record.fps,
+          frameCount: record.frameCount,
+          time: record.time,
+          sourceFrame: record.sourceFrame,
+          uploadId: record.id,
+          _isUpload: true
+        });
+      }
+    });
+
+    categories.value = groups;
   } catch (e) {
-    console.error('Load resource failed', e);
+    console.error('Failed to load resources:', e);
   } finally {
     loading.value = false;
   }
 }
 
-function handleTabChange() {
-  loadData();
+function handleCategoryClick(index: number) {
+  activeCategoryIndex.value = index;
+  selectedItem.value = null;
 }
 
 function selectItem(item: any) {
   selectedItem.value = item;
+}
+
+function isItemSelected(item: any) {
+  return selectedItem.value === item || (selectedItem.value?.id && selectedItem.value.id === item.id);
 }
 
 function handleDbClick(item: any) {
@@ -156,14 +231,33 @@ function handleDbClick(item: any) {
 
 function confirmSelect() {
   if (selectedItem.value) {
-    emit('select', selectedItem.value);
+    emit('select', JSON.parse(JSON.stringify(selectedItem.value)));
     handleClose();
   }
 }
 
 function handleClose() {
   visible.value = false;
-  selectedItem.value = null;
+}
+
+function handleSearch() { }
+
+function formatTimeStr(time: number) {
+  if (!time) return '00:00';
+  const { str } = formatTime(time);
+  return str;
+}
+
+function getCategoryIcon(type: string) {
+  if (type === 'video') return VideoPlay;
+  if (type === 'image') return Picture;
+  if (type === 'audio') return Headset;
+  return Folder;
+}
+
+function handleImgError(e: Event) {
+  const target = e.target as HTMLImageElement;
+  target.style.opacity = '0.3';
 }
 
 watch(() => props.modelValue, (val) => {
@@ -174,7 +268,80 @@ watch(() => props.modelValue, (val) => {
 </script>
 
 <style scoped>
-.resource-select-dialog :deep(.el-dialog__body) {
-  padding: 10px 20px;
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #444;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #555;
+}
+
+.cc-dark-dialog :deep(.el-dialog__header) {
+  display: none;
+}
+
+.cc-dark-dialog :deep(.el-dialog__body) {
+  padding: 0;
+  background: transparent;
+}
+
+.cc-dark-dialog :deep(.el-dialog) {
+  background: transparent;
+  box-shadow: none;
+}
+
+:deep(.cc-search-input .el-input__wrapper) {
+  background-color: #252525;
+  box-shadow: none;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 4px 12px;
+}
+
+:deep(.cc-search-input .el-input__wrapper.is-focus) {
+  border-color: #00b894;
+}
+
+:deep(.cc-search-input .el-input__inner) {
+  color: #eee;
+  height: 28px;
+}
+
+.cc-btn-secondary {
+  background: transparent;
+  border: 1px solid #444;
+  color: #ccc;
+}
+
+.cc-btn-secondary:hover {
+  border-color: #666;
+  color: white;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.cc-btn-primary {
+  background-color: #00b894;
+  border-color: #00b894;
+  color: white;
+}
+
+.cc-btn-primary:hover {
+  background-color: #00a383;
+  border-color: #00a383;
+}
+
+.cc-btn-primary:disabled {
+  background-color: #2a2a2a;
+  border-color: #333;
+  color: #555;
 }
 </style>
