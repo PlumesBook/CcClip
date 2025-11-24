@@ -5,15 +5,32 @@
     <div class="flex h-[600px] bg-[#181818] text-[#e0e0e0] overflow-hidden rounded-lg border border-[#333]">
       <!-- Left Sidebar -->
       <div class="w-[200px] flex-shrink-0 bg-[#1f1f1f] border-r border-[#2a2a2a] flex flex-col py-4">
-        <div class="px-4 mb-4">
+
+        <!-- AI Tool Entry -->
+        <div v-if="resourceType === 'video'" class="px-2 mb-4">
+          <div
+            class="cursor-pointer px-3 py-2.5 rounded-md text-sm flex items-center gap-3 transition-all duration-200 select-none"
+            :class="isAIActive ? 'bg-gradient-to-r from-[#00b894]/20 to-transparent text-[#00b894] font-medium border border-[#00b894]/30' : 'text-[#ccc] hover:bg-[#2a2a2a]'"
+            @click="handleAIActive">
+            <el-icon :size="18">
+              <MagicStick />
+            </el-icon>
+            <span>AI 视频生成</span>
+            <el-tag size="small" type="success" effect="dark"
+              class="ml-auto scale-75 origin-right bg-[#00b894] border-none text-white">NEW</el-tag>
+          </div>
+        </div>
+
+        <div class="px-4 mb-2">
           <span class="text-xs font-bold text-[#666] uppercase tracking-wider">分类</span>
         </div>
         <div class="flex-1 overflow-y-auto custom-scrollbar px-2 space-y-1">
           <div v-for="(cat, index) in categories" :key="index"
             class="cursor-pointer px-3 py-2.5 rounded-md text-sm flex items-center gap-3 transition-all duration-200 select-none"
-            :class="activeCategoryIndex === index ? 'bg-[#333] text-white font-medium' : 'text-[#999] hover:bg-[#2a2a2a] hover:text-[#ccc]'"
+            :class="(!isAIActive && activeCategoryIndex === index) ? 'bg-[#333] text-white font-medium' : 'text-[#999] hover:bg-[#2a2a2a] hover:text-[#ccc]'"
             @click="handleCategoryClick(index)">
-            <el-icon :size="16" :class="activeCategoryIndex === index ? 'text-primary-400' : 'text-[#666]'">
+            <el-icon :size="16"
+              :class="(!isAIActive && activeCategoryIndex === index) ? 'text-primary-400' : 'text-[#666]'">
               <component :is="getCategoryIcon(cat.type)" />
             </el-icon>
             <span class="truncate">{{ cat.title }}</span>
@@ -23,88 +40,104 @@
       </div>
 
       <!-- Right Content -->
-      <div class="flex-1 flex flex-col bg-[#181818] min-w-0">
-        <!-- Top Bar -->
-        <div class="h-16 border-b border-[#2a2a2a] flex items-center px-6 gap-4 justify-between bg-[#181818]">
-          <div class="text-lg font-medium text-white">{{ currentCategory?.title || '全部素材' }}</div>
+      <div class="flex-1 flex flex-col bg-[#181818] min-w-0 relative">
 
-          <div class="flex items-center gap-3">
-            <div class="relative w-64">
-              <el-input v-model="searchQuery" placeholder="搜索素材名称..." prefix-icon="Search" class="cc-search-input"
-                clearable @input="handleSearch" />
-            </div>
-          </div>
+        <!-- AI Generator View -->
+        <div v-if="isAIActive" class="absolute inset-0 z-10">
+          <AIGenerator @select="handleAISelect" />
         </div>
 
-        <!-- Grid Area -->
-        <div class="flex-1 overflow-y-auto p-5 custom-scrollbar relative" v-loading="loading"
-          element-loading-background="rgba(24, 24, 24, 0.8)">
+        <!-- Standard Grid View -->
+        <template v-else>
+          <!-- Top Bar -->
+          <div class="h-16 border-b border-[#2a2a2a] flex items-center px-6 gap-4 justify-between bg-[#181818]">
+            <div class="text-lg font-medium text-white">{{ currentCategory?.title || '全部素材' }}</div>
 
-          <!-- Empty State -->
-          <div v-if="!filteredList.length && !loading"
-            class="absolute inset-0 flex flex-col items-center justify-center text-[#666]">
-            <el-icon :size="64" class="mb-4 opacity-50">
-              <Box />
-            </el-icon>
-            <p class="text-sm">暂无相关素材</p>
+            <div class="flex items-center gap-3">
+              <div class="relative w-64">
+                <el-input v-model="searchQuery" placeholder="搜索素材名称..." prefix-icon="Search" class="cc-search-input"
+                  clearable @input="handleSearch" />
+              </div>
+            </div>
           </div>
 
-          <!-- Grid -->
-          <div v-else class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            <div v-for="(item, idx) in filteredList" :key="idx"
-              class="group relative aspect-video bg-[#252525] rounded-lg overflow-hidden cursor-pointer border border-transparent transition-all duration-200 hover:border-[#444]"
-              :class="isItemSelected(item) ? 'ring-2 ring-[#00b894] ring-offset-1 ring-offset-[#181818]' : ''"
-              @click="selectItem(item)" @dblclick="handleDbClick(item)">
-              <!-- Thumbnail -->
-              <div class="w-full h-full overflow-hidden relative">
-                <img :src="item.cover || item.source"
-                  class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  loading="lazy" @error="handleImgError" />
-                <!-- Overlay -->
-                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"></div>
-              </div>
+          <!-- Grid Area -->
+          <div class="flex-1 overflow-y-auto p-5 custom-scrollbar relative" v-loading="loading"
+            element-loading-background="rgba(24, 24, 24, 0.8)">
 
-              <!-- Duration Badge -->
-              <span v-if="item.time"
-                class="absolute bottom-1.5 right-1.5 text-[10px] font-mono text-white bg-black/60 backdrop-blur-sm px-1.5 py-0.5 rounded">
-                {{ formatTimeStr(item.time) }}
-              </span>
+            <!-- Empty State -->
+            <div v-if="!filteredList.length && !loading"
+              class="absolute inset-0 flex flex-col items-center justify-center text-[#666]">
+              <el-icon :size="64" class="mb-4 opacity-50">
+                <Box />
+              </el-icon>
+              <p class="text-sm">暂无相关素材</p>
+            </div>
 
-              <!-- Hover Title -->
-              <div
-                class="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end">
-                <p class="text-xs text-white truncate drop-shadow-md">{{ item.name }}</p>
-                <p class="text-[10px] text-[#ccc] truncate scale-90 origin-left mt-0.5">{{ item.width }}x{{ item.height
+            <!-- Grid -->
+            <div v-else class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              <div v-for="(item, idx) in filteredList" :key="idx"
+                class="group relative aspect-video bg-[#252525] rounded-lg overflow-hidden cursor-pointer border border-transparent transition-all duration-200 hover:border-[#444]"
+                :class="isItemSelected(item) ? 'ring-2 ring-[#00b894] ring-offset-1 ring-offset-[#181818]' : ''"
+                @click="selectItem(item)" @dblclick="handleDbClick(item)">
+                <!-- Thumbnail -->
+                <div class="w-full h-full overflow-hidden relative">
+                  <img :src="item.cover || item.source"
+                    class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    loading="lazy" @error="handleImgError" />
+                  <!-- Overlay -->
+                  <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"></div>
+
+                  <!-- AI Badge -->
+                  <div v-if="item.isAI" class="absolute top-1.5 left-1.5">
+                    <el-tag size="small" effect="dark"
+                      class="bg-purple-600/80 border-none text-white text-[10px] h-5 px-1">AI</el-tag>
+                  </div>
+                </div>
+
+                <!-- Duration Badge -->
+                <span v-if="item.time"
+                  class="absolute bottom-1.5 right-1.5 text-[10px] font-mono text-white bg-black/60 backdrop-blur-sm px-1.5 py-0.5 rounded">
+                  {{ formatTimeStr(item.time) }}
+                </span>
+
+                <!-- Hover Title -->
+                <div
+                  class="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end">
+                  <p class="text-xs text-white truncate drop-shadow-md">{{ item.name }}</p>
+                  <p class="text-[10px] text-[#ccc] truncate scale-90 origin-left mt-0.5">{{ item.width }}x{{
+                    item.height
                   }}</p>
-              </div>
+                </div>
 
-              <!-- Selected Check -->
-              <div v-if="isItemSelected(item)"
-                class="absolute top-1.5 right-1.5 bg-[#00b894] text-white rounded-full w-5 h-5 flex items-center justify-center shadow-lg animate-in zoom-in duration-200">
-                <el-icon :size="12">
-                  <Check />
-                </el-icon>
+                <!-- Selected Check -->
+                <div v-if="isItemSelected(item)"
+                  class="absolute top-1.5 right-1.5 bg-[#00b894] text-white rounded-full w-5 h-5 flex items-center justify-center shadow-lg animate-in zoom-in duration-200">
+                  <el-icon :size="12">
+                    <Check />
+                  </el-icon>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Footer -->
-        <div class="h-16 border-t border-[#2a2a2a] flex items-center justify-between px-6 bg-[#1f1f1f]">
-          <div class="flex items-center text-xs text-[#888] gap-2">
-            <el-tag v-if="selectedItem" size="small" type="info" effect="dark"
-              class="bg-[#333] border-none text-[#ccc] max-w-[200px] truncate">
-              {{ selectedItem.name }}
-            </el-tag>
-            <span v-else>请选择一个素材进行替换</span>
+          <!-- Footer -->
+          <div class="h-16 border-t border-[#2a2a2a] flex items-center justify-between px-6 bg-[#1f1f1f]">
+            <div class="flex items-center text-xs text-[#888] gap-2">
+              <el-tag v-if="selectedItem" size="small" type="info" effect="dark"
+                class="bg-[#333] border-none text-[#ccc] max-w-[200px] truncate">
+                {{ selectedItem.name }}
+              </el-tag>
+              <span v-else>请选择一个素材进行替换</span>
+            </div>
+            <div class="flex gap-3">
+              <el-button @click="handleClose" class="cc-btn-secondary">取消</el-button>
+              <el-button type="primary" @click="confirmSelect" :disabled="!selectedItem" class="cc-btn-primary">
+                确认替换
+              </el-button>
+            </div>
           </div>
-          <div class="flex gap-3">
-            <el-button @click="handleClose" class="cc-btn-secondary">取消</el-button>
-            <el-button type="primary" @click="confirmSelect" :disabled="!selectedItem" class="cc-btn-primary">
-              确认替换
-            </el-button>
-          </div>
-        </div>
+        </template>
       </div>
     </div>
   </el-dialog>
@@ -112,10 +145,11 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { Search, Box, Check, VideoPlay, Picture, Headset, Folder } from '@element-plus/icons-vue';
+import { Search, Box, Check, VideoPlay, Picture, Headset, Folder, MagicStick } from '@element-plus/icons-vue';
 import { getData } from '@/api/mock';
 import { getUploadResources } from '@/utils/uploadStore';
 import { formatTime } from '@/utils/common';
+import AIGenerator from './AIGenerator.vue';
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -131,6 +165,7 @@ const visible = computed({
 const loading = ref(false);
 const categories = ref<any[]>([]);
 const activeCategoryIndex = ref(0);
+const isAIActive = ref(false);
 const searchQuery = ref('');
 const selectedItem = ref<any>(null);
 
@@ -155,9 +190,14 @@ const filteredList = computed(() => {
 async function loadData() {
   loading.value = true;
   categories.value = [];
-  selectedItem.value = null;
+  // Don't reset selectedItem if it's already valid, to allow persistent selection? 
+  // Actually, reset is safer for new open.
+  if (!visible.value) selectedItem.value = null;
+
   searchQuery.value = '';
-  activeCategoryIndex.value = 0;
+  // If we are opening, default to first category unless we want to remember state.
+  // activeCategoryIndex.value = 0; 
+  // isAIActive.value = false;
 
   try {
     const [sysRes, uploads] = await Promise.all([
@@ -198,7 +238,8 @@ async function loadData() {
           time: record.time,
           sourceFrame: record.sourceFrame,
           uploadId: record.id,
-          _isUpload: true
+          _isUpload: true,
+          isAI: record.isAI // <--- Map this
         });
       }
     });
@@ -212,8 +253,22 @@ async function loadData() {
 }
 
 function handleCategoryClick(index: number) {
+  isAIActive.value = false;
   activeCategoryIndex.value = index;
   selectedItem.value = null;
+}
+
+function handleAIActive() {
+  isAIActive.value = true;
+  selectedItem.value = null;
+}
+
+function handleAISelect(item: any) {
+  // AI Generator emits a selected item (already saved to IDB)
+  // We need to refresh the list to show it in "My Uploads" if we were to switch back,
+  // but here we just want to confirm selection immediately.
+  selectedItem.value = item;
+  confirmSelect();
 }
 
 function selectItem(item: any) {
@@ -238,6 +293,7 @@ function confirmSelect() {
 
 function handleClose() {
   visible.value = false;
+  isAIActive.value = false; // Reset view on close
 }
 
 function handleSearch() { }

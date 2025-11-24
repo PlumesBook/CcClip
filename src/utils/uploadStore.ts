@@ -14,6 +14,7 @@ export interface UploadStoreSaveParams {
   time: number;
   file: File;
   sourceFrame?: number;
+  isAI?: boolean;
 }
 
 export interface UploadStoreRecord {
@@ -30,6 +31,7 @@ export interface UploadStoreRecord {
   frameCount: number;
   time: number;
   sourceFrame?: number;
+  isAI?: boolean;
   createdAt: number;
   file: Blob;
 }
@@ -81,6 +83,7 @@ export async function saveUploadResource(params: UploadStoreSaveParams): Promise
     frameCount: params.frameCount,
     time: params.time,
     sourceFrame: params.sourceFrame,
+    isAI: params.isAI,
     createdAt: Date.now(),
     file: params.file
   };
