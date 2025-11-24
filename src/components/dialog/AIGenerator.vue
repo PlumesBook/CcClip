@@ -19,14 +19,33 @@
 
     <div class="flex-1 flex flex-col p-6 overflow-y-auto custom-scrollbar">
       <!-- Header -->
-      <div class="mb-6">
-        <h2 class="text-lg font-medium text-white flex items-center gap-2">
-          <el-icon class="text-[#00b894]">
-            <VideoCamera />
-          </el-icon>
-          AI 视频生成
-        </h2>
-        <p class="text-xs text-[#666] mt-1">描述您想要的画面，AI 将为您生成视频素材</p>
+      <div class="mb-6 flex justify-between items-start">
+        <div>
+          <h2 class="text-lg font-medium text-white flex items-center gap-2">
+            <el-icon class="text-[#00b894]">
+              <VideoCamera />
+            </el-icon>
+            AI 视频生成
+          </h2>
+          <p class="text-xs text-[#666] mt-1">描述您想要的画面，AI 将为您生成视频素材</p>
+        </div>
+
+        <!-- Task Retrieval Tool -->
+        <el-popover placement="bottom" :width="300" trigger="click">
+          <template #reference>
+            <el-button link size="small" class="text-[#666] hover:text-[#00b894]">
+              找回历史任务
+            </el-button>
+          </template>
+          <div class="p-2">
+            <h4 class="text-sm font-medium mb-2 text-[#333]">输入 File ID / Task ID</h4>
+            <el-input v-model="retrieveInput" size="small" placeholder="输入 ID..." class="mb-2" />
+            <el-button type="primary" size="small" class="w-full" :loading="isRetrieving" @click="handleRetrieve"
+              :disabled="!retrieveInput">
+              获取视频
+            </el-button>
+          </div>
+        </el-popover>
       </div>
 
       <!-- Input Area -->
@@ -39,7 +58,8 @@
           </div>
         </div>
 
-        <div class="flex justify-end">
+        <div class="flex justify-between items-center">
+          <span class="text-xs text-[#666]">* 生成一次消耗约 ¥3-5 元</span>
           <el-button type="primary" class="cc-btn-primary px-8" :loading="isGenerating" @click="handleGenerate"
             :disabled="!prompt.trim()">
             {{ isGenerating ? '生成中...' : '立即生成' }}
@@ -69,6 +89,11 @@
           </div>
           <h3 class="text-white font-medium mb-1">{{ statusText }}</h3>
           <p class="text-xs text-[#666]">视频生成通常需要 1-3 分钟，请耐心等待...</p>
+          <div class="mt-2">
+            <span class="text-[10px] text-[#444] bg-[#111] px-2 py-1 rounded font-mono select-all">TaskID: {{
+              currentTask
+            }}</span>
+          </div>
         </div>
 
         <!-- Result Player -->
@@ -78,9 +103,9 @@
               autoplay></video>
           </div>
           <div class="h-14 bg-[#252525] border-t border-[#333] flex items-center justify-between px-4">
-            <span class="text-xs text-[#888]">生成成功</span>
+            <span class="text-xs text-[#888]">获取成功</span>
             <div class="flex gap-3">
-              <el-button size="small" @click="clearResult" class="cc-btn-secondary">重试</el-button>
+              <el-button size="small" @click="clearResult" class="cc-btn-secondary">清除</el-button>
               <el-button type="primary" size="small" @click="saveAndSelect" class="cc-btn-primary">
                 保存并使用
               </el-button>
@@ -96,7 +121,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { MagicStick, VideoCamera, Film } from '@element-plus/icons-vue';
-import { getApiKey, setApiKey, generateVideo, queryTaskStatus } from '@/api/minimax';
+import { getApiKey, setApiKey, generateVideo, queryTaskStatus, fetchFileDownloadUrl } from '@/api/minimax';
 import { saveUploadResource } from '@/utils/uploadStore';
 
 const emit = defineEmits(['select']);
@@ -110,6 +135,10 @@ const currentTask = ref<string | null>(null);
 const statusText = ref('正在加入队列...');
 const generatedVideoUrl = ref('');
 const pollTimer = ref<any>(null);
+
+// Retrieve Manual
+const retrieveInput = ref('');
+const isRetrieving = ref(false);
 
 // --- API Key Mgmt ---
 function saveApiKey() {
@@ -158,7 +187,7 @@ function startPolling(taskId: string) {
       stopPolling();
       ElMessage.error(e.message || '查询状态失败');
       isGenerating.value = false;
-      currentTask.value = null;
+      // Keep task id visible for manual recovery
     }
   }, 3000); // Poll every 3s
 }
@@ -182,6 +211,62 @@ function clearResult() {
   currentTask.value = null;
 }
 
+// --- Manual Retrieve Logic ---
+async function handleRetrieve() {
+  if (!retrieveInput.value) return;
+  const input = retrieveInput.value.trim();
+  isRetrieving.value = true;
+
+  try {
+    // Heuristic: if input is numeric and long (like task_id usually is), try task status first
+    // But file_id is also numeric. MiniMax task_id/file_id formats are similar (long ints).
+    // Let's try queryTaskStatus first, if that fails or returns file_id, we use it.
+
+    // 1. Try as Task ID
+    try {
+      const res = await queryTaskStatus(input);
+      if (res.status === 'Success' && res.download_url) {
+        finishGeneration(res.download_url);
+        retrieveInput.value = ''; // clear on success
+        return;
+      } else if (res.status === 'Success' && res.file_id) {
+        // Got file_id but no url? Try fetch
+        const url = await fetchFileDownloadUrl(res.file_id);
+        if (url) {
+          finishGeneration(url);
+          retrieveInput.value = '';
+          return;
+        }
+      } else if (res.status === 'Processing' || res.status === 'Queueing') {
+        // It's a running task, start polling
+        currentTask.value = input;
+        startPolling(input);
+        retrieveInput.value = '';
+        return;
+      }
+    } catch (e) {
+      // Ignore task query error, might be a file ID directly
+    }
+
+    // 2. Try as File ID directly
+    try {
+      const url = await fetchFileDownloadUrl(input);
+      if (url) {
+        finishGeneration(url);
+        retrieveInput.value = '';
+        return;
+      }
+    } catch (e) {
+      throw new Error('无法找到对应任务或文件');
+    }
+
+  } catch (e: any) {
+    ElMessage.error(e.message || '找回失败');
+  } finally {
+    isRetrieving.value = false;
+  }
+}
+
 // --- Save Logic ---
 async function saveAndSelect() {
   if (!generatedVideoUrl.value) return;
@@ -202,7 +287,7 @@ async function saveAndSelect() {
       activeKey: 'video', // Default to video category
       groupType: 'video',
       groupTitle: '我的上传',
-      name: prompt.value.slice(0, 20) || 'AI 生成视频',
+      name: (prompt.value.slice(0, 20) || 'AI 生成视频'),
       format: 'mp4',
       cover: meta.cover,
       width: meta.width,
