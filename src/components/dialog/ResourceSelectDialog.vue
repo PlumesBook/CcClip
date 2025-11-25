@@ -77,11 +77,11 @@
             <!-- Grid -->
             <div v-else class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               <div v-for="(item, idx) in filteredList" :key="idx"
-                class="group relative aspect-video bg-[#252525] rounded-lg overflow-hidden cursor-pointer border border-transparent transition-all duration-200 hover:border-[#444]"
+                class="group relative bg-[#252525] rounded-lg overflow-hidden cursor-pointer border border-transparent transition-all duration-200 hover:border-[#444]"
                 :class="isItemSelected(item) ? 'ring-2 ring-[#00b894] ring-offset-1 ring-offset-[#181818]' : ''"
                 @click="selectItem(item)" @dblclick="handleDbClick(item)">
                 <!-- Thumbnail -->
-                <div class="w-full h-full overflow-hidden relative">
+                <div class="aspect-video w-full overflow-hidden relative">
                   <img :src="item.cover || item.source"
                     class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     loading="lazy" @error="handleImgError" />
@@ -93,29 +93,34 @@
                     <el-tag size="small" effect="dark"
                       class="bg-purple-600/80 border-none text-white text-[10px] h-5 px-1">AI</el-tag>
                   </div>
+
+                  <!-- Duration Badge (Video Only, Bottom-Left) -->
+                  <span v-if="item.time"
+                    class="absolute bottom-1.5 left-1.5 text-[10px] font-mono text-white bg-black/60 backdrop-blur-sm px-1.5 py-0.5 rounded">
+                    {{ formatTimeStr(item.time) }}
+                  </span>
+
+                  <!-- Hover Info (for non-upload items) -->
+                  <div v-if="!item._isUpload"
+                    class="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end">
+                    <p class="text-xs text-white truncate drop-shadow-md">{{ item.name }}</p>
+                    <p class="text-[10px] text-[#ccc] truncate scale-90 origin-left mt-0.5">{{ item.width }}x{{
+                      item.height
+                    }}</p>
+                  </div>
+
+                  <!-- Selected Check -->
+                  <div v-if="isItemSelected(item)"
+                    class="absolute top-1.5 right-1.5 bg-[#00b894] text-white rounded-full w-5 h-5 flex items-center justify-center shadow-lg animate-in zoom-in duration-200">
+                    <el-icon :size="12">
+                      <Check />
+                    </el-icon>
+                  </div>
                 </div>
 
-                <!-- Duration Badge -->
-                <span v-if="item.time"
-                  class="absolute bottom-1.5 right-1.5 text-[10px] font-mono text-white bg-black/60 backdrop-blur-sm px-1.5 py-0.5 rounded">
-                  {{ formatTimeStr(item.time) }}
-                </span>
-
-                <!-- Hover Title -->
-                <div
-                  class="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end">
-                  <p class="text-xs text-white truncate drop-shadow-md">{{ item.name }}</p>
-                  <p class="text-[10px] text-[#ccc] truncate scale-90 origin-left mt-0.5">{{ item.width }}x{{
-                    item.height
-                  }}</p>
-                </div>
-
-                <!-- Selected Check -->
-                <div v-if="isItemSelected(item)"
-                  class="absolute top-1.5 right-1.5 bg-[#00b894] text-white rounded-full w-5 h-5 flex items-center justify-center shadow-lg animate-in zoom-in duration-200">
-                  <el-icon :size="12">
-                    <Check />
-                  </el-icon>
+                <!-- Filename Footer (Upload Items Only) -->
+                <div v-if="item._isUpload" class="px-2 py-1.5 bg-[#1f1f1f] border-t border-[#333]">
+                  <p class="text-[11px] text-[#999] truncate">{{ item.name }}</p>
                 </div>
               </div>
             </div>
@@ -130,9 +135,10 @@
               </el-tag>
               <span v-else>请选择一个素材进行替换</span>
             </div>
-            <div class="flex gap-3">
-              <el-button @click="handleClose" class="cc-btn-secondary">取消</el-button>
-              <el-button type="primary" @click="confirmSelect" :disabled="!selectedItem" class="cc-btn-primary">
+            <div class="flex gap-1">
+              <el-button size="default" @click="handleClose" class="cc-btn-secondary">取消</el-button>
+              <el-button type="primary" size="default" @click="confirmSelect" :disabled="!selectedItem"
+                class="cc-btn-primary">
                 确认替换
               </el-button>
             </div>
