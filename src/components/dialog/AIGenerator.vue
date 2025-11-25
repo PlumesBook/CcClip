@@ -1,22 +1,5 @@
 <template>
   <div class="h-full flex flex-col bg-[#181818] text-[#e0e0e0] relative">
-
-    <!-- API Key Config (Overlay if missing) -->
-    <div v-if="!hasApiKey" class="absolute inset-0 z-50 bg-[#181818] flex flex-col items-center justify-center p-8">
-      <div class="w-full max-w-md space-y-4 text-center">
-        <el-icon :size="48" class="text-[#00b894] mb-2">
-          <MagicStick />
-        </el-icon>
-        <h3 class="text-lg font-medium text-white">配置 MiniMax API</h3>
-        <p class="text-sm text-[#888]">请输入您的 MiniMax API Key 以开启 AI 视频生成功能</p>
-        <el-input v-model="apiKeyInput" placeholder="sk-..." class="cc-input" type="password" show-password />
-        <el-button type="primary" class="w-full cc-btn-primary" @click="saveApiKey" :disabled="!apiKeyInput">
-          开始使用
-        </el-button>
-        <p class="text-xs text-[#555] mt-4">Key 仅保存在您的本地浏览器中</p>
-      </div>
-    </div>
-
     <div class="flex-1 flex flex-col p-6 overflow-y-auto custom-scrollbar">
       <!-- Header -->
       <div class="mb-6 flex justify-between items-start">
@@ -30,20 +13,42 @@
           <p class="text-xs text-[#666] mt-1">描述您想要的画面，AI 将为您生成视频素材</p>
         </div>
 
-        <!-- Task Retrieval Tool -->
-        <el-popover placement="bottom" :width="300" trigger="click">
+        <!-- Task Retrieval & API Config -->
+        <el-popover placement="bottom" :width="320" trigger="click">
           <template #reference>
             <el-button link size="small" class="text-[#666] hover:text-[#00b894]">
-              找回历史任务
+              <el-icon class="mr-1">
+                <Setting />
+              </el-icon>
+              设置
             </el-button>
           </template>
-          <div class="p-2">
-            <h4 class="text-sm font-medium mb-2 text-[#333]">输入 File ID / Task ID</h4>
-            <el-input v-model="retrieveInput" size="small" placeholder="输入 ID..." class="mb-2" />
-            <el-button type="primary" size="small" class="w-full" :loading="isRetrieving" @click="handleRetrieve"
-              :disabled="!retrieveInput">
-              获取视频
-            </el-button>
+          <div class="space-y-4">
+            <!-- API Key Config -->
+            <div class="p-3 bg-[#f5f5f5] rounded-lg">
+              <h4 class="text-sm font-medium mb-2 text-[#333] flex items-center gap-1">
+                <el-icon class="text-[#00b894]">
+                  <Key />
+                </el-icon>
+                API 配置
+              </h4>
+              <el-input v-model="apiKeyInput" size="small" placeholder="输入 MiniMax API Key..." type="password"
+                show-password class="mb-2" />
+              <el-button type="primary" size="small" class="w-full" @click="saveApiKey">
+                {{ apiKeyInput ? (hasApiKey ? '更新 Key' : '保存 Key') : '清除 Key' }}
+              </el-button>
+              <p class="text-[10px] text-[#999] mt-1">{{ hasApiKey ? '✓ 已配置' : '未配置时将使用演示模式' }}</p>
+            </div>
+
+            <!-- Task Retrieval -->
+            <div class="p-3 bg-[#f5f5f5] rounded-lg">
+              <h4 class="text-sm font-medium mb-2 text-[#333]">找回历史任务</h4>
+              <el-input v-model="retrieveInput" size="small" placeholder="输入 Task ID / File ID..." class="mb-2" />
+              <el-button type="primary" size="small" class="w-full" :loading="isRetrieving" @click="handleRetrieve"
+                :disabled="!retrieveInput || !hasApiKey">
+                获取视频
+              </el-button>
+            </div>
           </div>
         </el-popover>
       </div>
@@ -59,7 +64,7 @@
         </div>
 
         <div class="flex justify-between items-center">
-          <span class="text-xs text-[#666]">* 生成一次消耗约 ¥3-5 元</span>
+          <span class="text-xs text-[#666]">{{ hasApiKey ? '* 生成一次消耗约 ¥3-5 元' : '* 演示模式 (未配置API)' }}</span>
           <el-button type="primary" class="cc-btn-primary px-8" :loading="isGenerating" @click="handleGenerate"
             :disabled="!prompt.trim()">
             {{ isGenerating ? '生成中...' : '立即生成' }}
@@ -92,21 +97,21 @@
           <div class="mt-2">
             <span class="text-[10px] text-[#444] bg-[#111] px-2 py-1 rounded font-mono select-all">TaskID: {{
               currentTask
-            }}</span>
+              }}</span>
           </div>
         </div>
 
         <!-- Result Player -->
         <div v-if="generatedVideoUrl" class="w-full h-full flex flex-col">
-          <div class="flex-1 relative bg-black group">
+          <div class="flex-1 relative bg-black group h-[270px]">
             <video ref="videoRef" :src="generatedVideoUrl" class="w-full h-full object-contain" controls loop
               autoplay></video>
           </div>
           <div class="h-14 bg-[#252525] border-t border-[#333] flex items-center justify-between px-4">
             <span class="text-xs text-[#888]">获取成功</span>
-            <div class="flex gap-3">
-              <el-button size="small" @click="clearResult" class="cc-btn-secondary">清除</el-button>
-              <el-button type="primary" size="small" @click="saveAndSelect" class="cc-btn-primary">
+            <div class="flex gap-1">
+              <el-button @click="clearResult" class="cc-btn-secondary">清除</el-button>
+              <el-button type="primary" @click="saveAndSelect" class="cc-btn-primary">
                 保存并使用
               </el-button>
             </div>
@@ -120,15 +125,15 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { MagicStick, VideoCamera, Film } from '@element-plus/icons-vue';
+import { MagicStick, VideoCamera, Film, Setting, Key } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import { getApiKey, setApiKey, generateVideo, queryTaskStatus, fetchFileDownloadUrl } from '@/api/minimax';
-import { saveUploadResource } from '@/utils/uploadStore';
+import { saveUploadResource, getUploadResources } from '@/utils/uploadStore';
 
 const emit = defineEmits(['select']);
 
 // --- State ---
-const apiKeyInput = ref('');
+const apiKeyInput = ref(getApiKey()); // 初始化时加载已有的 Key
 const hasApiKey = ref(!!getApiKey());
 const prompt = ref('');
 const isGenerating = ref(false);
@@ -143,10 +148,10 @@ const isRetrieving = ref(false);
 
 // --- API Key Mgmt ---
 function saveApiKey() {
-  if (apiKeyInput.value.trim()) {
-    setApiKey(apiKeyInput.value.trim());
-    hasApiKey.value = true;
-  }
+  const key = apiKeyInput.value.trim();
+  setApiKey(key); // 空字符串会清除 Key
+  hasApiKey.value = !!key;
+  ElMessage.success(key ? 'API Key 已保存' : 'API Key 已清除');
 }
 
 // --- Generation Logic ---
@@ -158,6 +163,13 @@ async function handleGenerate() {
   generatedVideoUrl.value = '';
   statusText.value = '正在提交任务...';
 
+  // Demo Mode: No API Key
+  if (!hasApiKey.value) {
+    currentTask.value = 'DEMO-' + Date.now();
+    await simulateDemoGeneration();
+    return;
+  }
+
   try {
     const { task_id } = await generateVideo({ prompt: prompt.value });
     currentTask.value = task_id;
@@ -166,6 +178,48 @@ async function handleGenerate() {
     ElMessage.error(e.message || '生成失败');
     isGenerating.value = false;
   }
+}
+
+// --- Demo Mode: Simulate generation with user's first video ---
+async function simulateDemoGeneration() {
+  const stages = [
+    { text: '排队中...', delay: 800 },
+    { text: '正在分析提示词...', delay: 1200 },
+    { text: '正在生成视频帧...', delay: 2000 },
+    { text: '正在合成视频...', delay: 1500 },
+    { text: '正在下载视频流...', delay: 1000 }
+  ];
+
+  for (const stage of stages) {
+    statusText.value = stage.text;
+    await sleep(stage.delay);
+  }
+
+  // Fetch user's first uploaded video
+  try {
+    const uploads = await getUploadResources('video');
+    if (uploads.length > 0) {
+      const firstVideo = uploads[0];
+      const blobUrl = URL.createObjectURL(firstVideo.file);
+      generatedVideoUrl.value = blobUrl;
+      statusText.value = '完成 (演示)';
+      ElMessage.success('演示模式：已使用您上传的视频作为示例');
+    } else {
+      ElMessage.warning('演示模式：请先上传一个视频素材');
+      statusText.value = '无可用素材';
+      currentTask.value = null;
+    }
+  } catch (e) {
+    console.error(e);
+    ElMessage.error('获取演示素材失败');
+    currentTask.value = null;
+  } finally {
+    isGenerating.value = false;
+  }
+}
+
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function startPolling(taskId: string) {

@@ -187,6 +187,12 @@ body .el-loading-spinner .path{
     @apply bg-gray-800 text-white border-gray-600;
 }
 
+[type='text']:focus, input:where(:not([type])):focus, [type='email']:focus, [type='url']:focus, [type='password']:focus, [type='number']:focus, [type='date']:focus, [type='datetime-local']:focus, [type='month']:focus, [type='search']:focus, [type='tel']:focus, [type='time']:focus, [type='week']:focus, [multiple]:focus, textarea:focus, select:focus {
+    @apply ring-2 ring-yellow-400 ring-opacity-50;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
 .el-textarea .el-input__count{
     background-color: inherit;
 }
@@ -197,4 +203,10 @@ body .el-loading-spinner .path{
 }
 .el-dialog__title {
     @apply text-white !important;
+}
+
+.el-input__inner {
+    font-size: inherit;
+    background: transparent;
+    padding-right: 0;
 }
