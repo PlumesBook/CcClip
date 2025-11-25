@@ -15,7 +15,7 @@
             <el-icon :size="18">
               <MagicStick />
             </el-icon>
-            <span>AI 视频生成</span>
+            <span>AI 生成</span>
             <el-tag size="small" type="success" effect="dark"
               class="ml-auto scale-75 origin-right bg-[#00b894] border-none text-white">NEW</el-tag>
           </div>
@@ -34,7 +34,7 @@
               <component :is="getCategoryIcon(cat.type)" />
             </el-icon>
             <span class="truncate">{{ cat.title }}</span>
-            <span class="ml-auto text-xs text-[#555]" v-if="cat.items?.length">{{ cat.items.length }}</span>
+            <span class="ml-auto text-xs" v-if="cat.items?.length">{{ cat.items.length }}</span>
           </div>
         </div>
       </div>

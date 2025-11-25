@@ -186,3 +186,15 @@ body .el-loading-spinner .path{
 [type='text'], input:where(:not([type])), [type='email'], [type='url'], [type='password'], [type='number'], [type='date'], [type='datetime-local'], [type='month'], [type='search'], [type='tel'], [type='time'], [type='week'], [multiple], textarea, select {
     @apply bg-gray-800 text-white border-gray-600;
 }
+
+.el-textarea .el-input__count{
+    background-color: inherit;
+}
+.el-dialog {
+    background: transparent !important;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25) !important;
+}
+.el-dialog__title {
+    @apply text-white !important;
+}

@@ -121,6 +121,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { MagicStick, VideoCamera, Film } from '@element-plus/icons-vue';
+import { ElMessage } from 'element-plus';
 import { getApiKey, setApiKey, generateVideo, queryTaskStatus, fetchFileDownloadUrl } from '@/api/minimax';
 import { saveUploadResource } from '@/utils/uploadStore';
 
@@ -175,7 +176,9 @@ function startPolling(taskId: string) {
       const res = await queryTaskStatus(taskId);
 
       if (res.status === 'Success' && res.download_url) {
-        finishGeneration(res.download_url);
+        // IMPORTANT: We pass download_url to finishGeneration.
+        // Inside finishGeneration, we must FETCH it to a Blob URL to avoid COEP/CORS issues.
+        await finishGeneration(res.download_url);
       } else if (res.status === 'Fail') {
         throw new Error(res.error || '生成失败');
       } else if (res.status === 'Processing') {
@@ -199,14 +202,35 @@ function stopPolling() {
   }
 }
 
-function finishGeneration(url: string) {
+// --- Fix: Fetch video as Blob to bypass COEP ---
+async function finishGeneration(url: string) {
   stopPolling();
-  generatedVideoUrl.value = url;
-  isGenerating.value = false;
-  statusText.value = '完成';
+
+  // Show loading state while fetching blob
+  statusText.value = '正在下载视频流...';
+
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+
+    generatedVideoUrl.value = blobUrl;
+    statusText.value = '完成';
+  } catch (e) {
+    console.error(e);
+    ElMessage.error('视频流下载失败 (Network/CORS)');
+    // Fallback: Try showing direct URL (might fail if COEP is strict)
+    generatedVideoUrl.value = url;
+    statusText.value = '完成 (Direct)';
+  } finally {
+    isGenerating.value = false;
+  }
 }
 
 function clearResult() {
+  if (generatedVideoUrl.value && generatedVideoUrl.value.startsWith('blob:')) {
+    URL.revokeObjectURL(generatedVideoUrl.value);
+  }
   generatedVideoUrl.value = '';
   currentTask.value = null;
 }
@@ -226,14 +250,14 @@ async function handleRetrieve() {
     try {
       const res = await queryTaskStatus(input);
       if (res.status === 'Success' && res.download_url) {
-        finishGeneration(res.download_url);
+        await finishGeneration(res.download_url);
         retrieveInput.value = ''; // clear on success
         return;
       } else if (res.status === 'Success' && res.file_id) {
         // Got file_id but no url? Try fetch
         const url = await fetchFileDownloadUrl(res.file_id);
         if (url) {
-          finishGeneration(url);
+          await finishGeneration(url);
           retrieveInput.value = '';
           return;
         }
@@ -252,7 +276,7 @@ async function handleRetrieve() {
     try {
       const url = await fetchFileDownloadUrl(input);
       if (url) {
-        finishGeneration(url);
+        await finishGeneration(url);
         retrieveInput.value = '';
         return;
       }
@@ -271,9 +295,14 @@ async function handleRetrieve() {
 async function saveAndSelect() {
   if (!generatedVideoUrl.value) return;
 
-  const loadingMsg = ElMessage.loading({ message: '正在下载并保存...', duration: 0 });
+  const loadingMsg = ElMessage({
+    message: '正在保存到库...',
+    type: 'info',
+    duration: 0,
+    grouping: true
+  });
   try {
-    // 1. Fetch blob
+    // 1. Get Blob (If it's already a blob url, we fetch it locally which is instant)
     const res = await fetch(generatedVideoUrl.value);
     const blob = await res.blob();
     const file = new File([blob], `ai_gen_${Date.now()}.mp4`, { type: 'video/mp4' });
@@ -358,6 +387,9 @@ function getVideoMetadata(file: File): Promise<{ width: number, height: number, 
 
 onUnmounted(() => {
   stopPolling();
+  if (generatedVideoUrl.value && generatedVideoUrl.value.startsWith('blob:')) {
+    URL.revokeObjectURL(generatedVideoUrl.value);
+  }
 });
 
 </script>
