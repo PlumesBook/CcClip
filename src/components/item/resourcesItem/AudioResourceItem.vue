@@ -1,9 +1,6 @@
 <template>
-  <div
-      class="relative w-full flex flex-row pr-1 border border-gray-200 hover:border-gray-300 dark:border-gray-800 dark:hover:border-gray-600"
-      draggable="true"
-      @dragstart="dragStart"
-  >
+  <div class="relative w-full flex flex-row pr-1 border border-[#333] hover:border-gray-500 bg-[#1e1e1e] rounded"
+    draggable="true" @dragstart="dragStart">
     <img class="w-20 h-20 rounded" :src="data.cover">
     <div class="flex-1 flex flex-col">
       <p class="max-h-10 overflow-clip text-sm flex-1 pl-3 mt-2">{{ data.name }}</p>
@@ -15,16 +12,10 @@
           <VideoPlay />
         </ElIcon>
       </div>
-      <div
-          v-if="closable"
-          class="absolute top-1 right-1 z-10"
-      >
+      <div v-if="closable" class="absolute top-1 right-1 z-10">
         <el-button type="danger" :icon="Close" circle size="small" @click.stop="handleDelete" />
       </div>
-      <div
-          class="absolute bottom-2 right-2 bg-blue-500 rounded-full w-6 h-6"
-          @click="addTrack"
-      >
+      <div class="absolute bottom-2 right-2 bg-blue-500 rounded-full w-6 h-6" @click="addTrack">
         <ElIcon :size="16" color="#fff" class="cursor-pointer p-1 box-content">
           <Plus />
         </ElIcon>
@@ -34,71 +25,71 @@
 </template>
 
 <script setup lang="ts">
-  import { Plus, VideoPlay, Close } from '@element-plus/icons-vue';
-  import type { AudioTractItem } from '@/stores/trackState';
-  import { formatTime } from '@/utils/common';
-  import { formatTrackItemData } from '@/utils/storeUtil';
-  import { useTrackState } from '@/stores/trackState';
-  import { usePlayerState } from '@/stores/playerState';
-  import { ElMessageBox } from 'element-plus';
+import { Plus, VideoPlay, Close } from '@element-plus/icons-vue';
+import type { AudioTractItem } from '@/stores/trackState';
+import { formatTime } from '@/utils/common';
+import { formatTrackItemData } from '@/utils/storeUtil';
+import { useTrackState } from '@/stores/trackState';
+import { usePlayerState } from '@/stores/playerState';
+import { ElMessageBox } from 'element-plus';
 
-  const props = defineProps({
-    data: {
-      type: Object,
-      default() {
-        return {} as AudioTractItem;
-      }
-    },
-    type: {
-      type: String,
-      default: ''
-    },
-    closable: {
-      type: Boolean,
-      default: false
+const props = defineProps({
+  data: {
+    type: Object,
+    default() {
+      return {} as AudioTractItem;
     }
-  });
-  const emit = defineEmits(['delete']);
-  const store = useTrackState();
-  const playerStore = usePlayerState();
-  function dragStart(event: DragEvent) {
-    event.stopPropagation();
-    const dragInfo = {
-      type: props.type,
-      ...props.data
-    };
-    playerStore.isPause = true;
-    store.dragData.dataInfo = JSON.stringify(dragInfo);
-    store.dragData.dragType = props.type;
-    store.dragData.dragPoint.x = event.offsetX;
-    store.dragData.dragPoint.y = event.offsetY;
-    store.selectTrackItem.line = -1;
-    store.selectTrackItem.index = -1;
+  },
+  type: {
+    type: String,
+    default: ''
+  },
+  closable: {
+    type: Boolean,
+    default: false
   }
-  function addTrack(event: MouseEvent) {
-    playerStore.isPause = true;
-    event.stopPropagation();
-    const dragInfo = {
-      type: props.type,
-      ...props.data
-    };
-    store.addTrack(formatTrackItemData(dragInfo, playerStore.playStartFrame));
-  }
-  function handleDelete() {
-    ElMessageBox.confirm(
-      '确认删除该文件吗？删除后无法恢复。',
-      '提示',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning',
-      }
-    )
-      .then(() => {
-        emit('delete', props.data);
-      })
-      .catch(() => {
-        // catch cancel
-      });
-  }
+});
+const emit = defineEmits(['delete']);
+const store = useTrackState();
+const playerStore = usePlayerState();
+function dragStart(event: DragEvent) {
+  event.stopPropagation();
+  const dragInfo = {
+    type: props.type,
+    ...props.data
+  };
+  playerStore.isPause = true;
+  store.dragData.dataInfo = JSON.stringify(dragInfo);
+  store.dragData.dragType = props.type;
+  store.dragData.dragPoint.x = event.offsetX;
+  store.dragData.dragPoint.y = event.offsetY;
+  store.selectTrackItem.line = -1;
+  store.selectTrackItem.index = -1;
+}
+function addTrack(event: MouseEvent) {
+  playerStore.isPause = true;
+  event.stopPropagation();
+  const dragInfo = {
+    type: props.type,
+    ...props.data
+  };
+  store.addTrack(formatTrackItemData(dragInfo, playerStore.playStartFrame));
+}
+function handleDelete() {
+  ElMessageBox.confirm(
+    '确认删除该文件吗？删除后无法恢复。',
+    '提示',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  )
+    .then(() => {
+      emit('delete', props.data);
+    })
+    .catch(() => {
+      // catch cancel
+    });
+}
 </script>

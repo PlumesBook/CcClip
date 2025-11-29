@@ -1,24 +1,41 @@
 <template>
-  <div class="flex flex-col w-16 h-full border-r dark:border-gray-600 border-gray-300 bg-gray-50 dark:bg-gray-800">
+  <div class="menu-list-container">
     <!-- Logo Area -->
-    <div class="h-12 flex items-center justify-center border-b dark:border-gray-600 border-gray-300">
-      <img class="h-6 w-6" :src="logoImage" alt="Logo">
+    <div class="logo-area">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M6 6C6 4.89543 6.89543 4 8 4H12C14.2091 4 16 5.79086 16 8V16C16 18.2091 14.2091 20 12 20H8C6.89543 20 6 19.1046 6 18V6Z"
+          stroke="white" stroke-width="2" />
+        <path d="M8 8L16 16" stroke="white" stroke-width="2" stroke-linecap="round" />
+        <path d="M16 8L8 16" stroke="white" stroke-width="2" stroke-linecap="round" />
+      </svg>
     </div>
 
-    <ul class="flex-1 flex flex-col w-full">
-      <li v-for="(item, index) of showMenuData" :key="item.key"
-        class="w-full flex flex-col items-center pt-2 pb-2 hover:border-indigo-400 hover:dark:bg-gray-700 hover:bg-gray-200 focus:outline-none cursor-pointer"
-        :class="item.active ? 'border-b-2 dark:bg-gray-700 bg-gray-100 border-indigo-400' : 'border-b dark:bg-gray-800 bg-gray-50 dark:border-gray-600 border-gray-200'"
+    <!-- Menu Items -->
+    <ul class="menu-items">
+      <li v-for="(item, index) of showMenuData" :key="item.key" class="menu-item" :class="{ 'active': item.active }"
         @click="activeChangeHandler(index)">
-        <ElIcon :size="item.active ? defaultSize + 2 : defaultSize" :color="item.active ? activeColor : baseColor"
-          class="flex-auto">
-          <component :is="item.icon" />
-        </ElIcon>
-        <span class="mt-0.5 select-none"
-          :class="item.active ? 'text-sm dark:text-gray-50 text-gray-800' : 'text-xs dark:text-gray-300 text-gray-500'">{{
-            item.title }}</span>
+
+        <div class="icon-wrapper">
+          <component :is="getIcon(item.icon)" />
+        </div>
+        <span class="menu-title">{{ item.title }}</span>
       </li>
     </ul>
+
+    <!-- Bottom Actions (Keyboard Shortcuts, etc.) -->
+    <div class="bottom-actions">
+      <div class="action-item">
+        <ElIcon :size="20">
+          <Monitor />
+        </ElIcon>
+      </div>
+      <div class="action-item">
+        <ElIcon :size="20">
+          <Monitor />
+        </ElIcon>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -27,32 +44,37 @@ import { ref, computed } from 'vue';
 import { menuData } from '@/data/baseMenu';
 import type { MenuItem } from '@/data/baseMenu';
 import { usePageState } from '@/stores/pageState';
-import logoImage from '@/assets/ccLogo.png';
+import {
+  VideoPlay, Microphone, Document, Picture, MagicStick,
+  Connection, Filter, Monitor, Files, Grid, Reading
+} from '@element-plus/icons-vue';
+
+// Map string icon names to actual components
+const iconMap: Record<string, any> = {
+  'VideoIcon': VideoPlay,
+  'AudioIcon': Microphone,
+  'TextIcon': Document,
+  'ImageIcon': Picture,
+  'EffectsIcon': MagicStick,
+  'TransitionIcon': Connection,
+  'FilterIcon': Filter
+};
+
 const props = defineProps({
   activeIndex: {
     type: Number,
     default: 0
-  },
-  defaultSize: {
-    type: Number,
-    default: 18
   }
 });
 const emit = defineEmits({
-  // 校验事件
   activeChange(activeItem: MenuItem) {
     return activeItem.title && activeItem.key;
   }
 });
 const store = usePageState();
-const baseColor = computed(() => {
-  return store.isDark ? '#D1D5DB' : '#6B7280';
-});
-const activeColor = computed(() => {
-  return store.isDark ? '#F9FAFB' : '#1F2937';
-});
+
 const activeIndex = ref(props.activeIndex);
-const defaultSize = ref(props.defaultSize);
+
 const showMenuData = computed(() => {
   return menuData.map((item, index) => {
     item.active = index === activeIndex.value;
@@ -60,13 +82,122 @@ const showMenuData = computed(() => {
   });
 });
 
+function getIcon(iconName: string) {
+  return iconMap[iconName] || VideoPlay;
+}
+
 function activeChangeHandler(index: number) {
-  if (store.hideSubMenu) {
+  if (index === activeIndex.value) {
+    store.hideSubMenu = !store.hideSubMenu;
+  } else {
     store.hideSubMenu = false;
-  } else if (index === activeIndex.value) {
-    store.hideSubMenu = true;
+    activeIndex.value = index;
+    emit('activeChange', menuData[activeIndex.value]);
   }
-  activeIndex.value = index;
-  emit('activeChange', menuData[activeIndex.value]);
 }
 </script>
+
+<style lang="scss" scoped>
+.menu-list-container {
+  display: flex;
+  flex-direction: column;
+  width: 68px; // CapCut sidebar width
+  height: 100%;
+  background-color: #060708; // Deep Black
+  color: #8e8e8e;
+  user-select: none;
+  border-right: 1px solid #1a1a1a; // Subtle border if needed, or remove
+}
+
+.logo-area {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+
+  svg {
+    opacity: 0.9;
+  }
+}
+
+.menu-items {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0 8px;
+  gap: 4px;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    width: 0;
+    background: transparent;
+  }
+}
+
+.menu-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 64px; // Taller touch target
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  .icon-wrapper {
+    font-size: 20px;
+    margin-bottom: 4px;
+    color: #8e8e8e;
+    transition: color 0.2s ease;
+  }
+
+  .menu-title {
+    font-size: 10px;
+    font-weight: 500;
+    color: #8e8e8e;
+    transition: color 0.2s ease;
+  }
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+
+    .icon-wrapper,
+    .menu-title {
+      color: #d0d0d0;
+    }
+  }
+
+  &.active {
+    background-color: #252627; // Active background
+
+    .icon-wrapper {
+      color: #ffffff;
+    }
+
+    .menu-title {
+      color: #ffffff;
+    }
+  }
+}
+
+.bottom-actions {
+  padding: 16px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+
+  .action-item {
+    color: #8e8e8e;
+    cursor: pointer;
+    transition: color 0.2s;
+
+    &:hover {
+      color: #ffffff;
+    }
+  }
+}
+</style>

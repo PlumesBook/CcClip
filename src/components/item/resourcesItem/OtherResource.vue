@@ -1,12 +1,11 @@
 <template>
   <div class="inline-block relative w-22 group" draggable="true" @dragstart="dragStart">
     <img referrerpolicy="no-referrer"
-      class=" cursor-pointer w-full h-24 block select-none dark:hover:border-cyan-800 hover:border-cyan-200 box-border object-contain"
-      :class="type === 'video' ? 'w-34 border-2 dark:border-gray-800 border-gray-50' : 'w-22 border dark:border-gray-700 border-gray-200'"
-      :src="formatData.cover" @mousemove="showGif($event, formatData.source)"
-      @mouseout="showGif($event, formatData.cover)">
-    <label class="mt-1 mb-3 text-xs w-full text-center select-none dark:text-gray-400 text-gray-600"
-      v-show="showData.showName">{{ formatData.name }}</label>
+      class=" cursor-pointer w-full h-24 block select-none hover:border-cyan-800 box-border object-contain bg-[#1e1e1e] rounded"
+      :class="type === 'video' ? 'w-34 border-2 border-[#333]' : 'w-22 border border-[#333]'" :src="formatData.cover"
+      @mousemove="showGif($event, formatData.source)" @mouseout="showGif($event, formatData.cover)">
+    <label class="mt-1 mb-3 text-xs w-full text-center select-none text-gray-400" v-show="showData.showName">{{
+      formatData.name }}</label>
     <span class="h-5 absolute bottom-1 right-2 text-xs text-gray-400" v-show="showData.showTime">{{
       formatTime(formatData.time).str }}</span>
     <div v-if="closable"
@@ -51,12 +50,12 @@ const props = defineProps({
 });
 const emit = defineEmits(['delete']);
 const formatData = computed(() => {
-  let { time, frameCount } = props.data;
+  let { time, frameCount } = props.data as any;
   if (props.type === 'video' && !time) {
     time = parseInt(`${frameCount / 30 * 1000}`);
   }
   return {
-    ...props.data,
+    ...(props.data as any),
     time
   };
 });
