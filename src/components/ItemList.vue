@@ -1,50 +1,39 @@
 <template>
-  <div class="item-list-container" :class="{ 'collapsed': collapse }">
-    <div class="panel-content">
-      <!-- Search Area -->
-      <div class="search-area">
-        <div class="search-input-wrapper">
-          <ElIcon :size="14" class="search-icon">
-            <Search />
-          </ElIcon>
-          <input type="text" placeholder="搜索范本" class="search-input" />
+  <div class="cc-panel" :class="{ 'is-collapsed': collapse }">
+    <div class="cc-panel-inner">
+      <!-- Search Bar -->
+      <div class="cc-search-bar">
+        <div class="cc-search-input">
+          <Search class="cc-search-icon" />
+          <input type="text" placeholder="搜尋範本" />
         </div>
-        <div class="filter-btn">
-          <ElIcon :size="16">
-            <Filter />
-          </ElIcon>
-        </div>
+        <button class="cc-filter-btn">
+          <Filter />
+        </button>
       </div>
 
-      <!-- Main Content Scrollable -->
-      <div class="scroll-content custom-scrollbar">
-        <!-- Header with Title and Change -->
-        <div class="section-header">
-          <span class="section-title">{{ title }}</span>
-          <div class="header-actions">
-            <span class="change-btn" v-if="title === '视频'">
-              <ElIcon :size="12">
-                <Refresh />
-              </ElIcon> Change
-            </span>
-          </div>
+      <!-- Scrollable Content -->
+      <div class="cc-panel-scroll">
+        <!-- Section Title with Change -->
+        <div class="cc-section-head">
+          <span class="cc-section-title">{{ title }}</span>
+          <span class="cc-change-btn">
+            <Refresh class="cc-change-icon" />
+            <span>Change</span>
+          </span>
         </div>
 
-        <!-- List Content -->
-        <div class="list-wrapper">
-          <template v-for="(subData, index) of listData" :key="`${index}-${subData.type}`">
-            <SubList :type="subData.type" :listData="subData" @upload="handleUpload($event, index)"
-              @delete="handleDelete($event, index)" />
-          </template>
-        </div>
+        <!-- Groups -->
+        <template v-for="(subData, index) of listData" :key="`${index}-${subData.type}`">
+          <SubList :type="subData.type" :listData="subData" @upload="handleUpload($event, index)"
+            @delete="handleDelete($event, index)" />
+        </template>
       </div>
     </div>
 
-    <!-- Right Center Collapse Button -->
-    <div class="collapse-trigger" @click="switchCollapse" v-show="!collapse">
-      <ElIcon :size="12" color="#8e8e8e">
-        <ArrowLeft />
-      </ElIcon>
+    <!-- Collapse Handle -->
+    <div class="cc-collapse-handle" @click="switchCollapse" v-show="!collapse">
+      <ArrowLeft />
     </div>
   </div>
 </template>
@@ -246,46 +235,43 @@ async function handleDelete(item: Record<string, any>, subIndex: number) {
 </script>
 
 <style lang="scss" scoped>
-.item-list-container {
+.cc-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
-  width: 320px; // Standard panel width
+  width: 320px;
   height: 100%;
-  background-color: #121212; // Panel Dark Gray
-  color: #e0e0e0;
-  border-right: 1px solid #1a1a1a;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative; // For absolute positioning of collapse button
-  // overflow: hidden; // Remove overflow hidden to allow button to stick out if needed, but here we keep it inside
-  overflow: visible; // Allow button to be seen if positioned on edge
+  background-color: #1a1a1c;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: visible;
+  overflow-x: hidden;
 
-  &.collapsed {
+  &.is-collapsed {
     width: 0;
-    border-right: none;
 
-    .collapse-trigger {
-      display: none; // Hide button when collapsed
+    .cc-collapse-handle {
+      display: none;
     }
   }
 }
 
-.panel-content {
+.cc-panel-inner {
   display: flex;
   flex-direction: column;
-  width: 320px; // Keep content width fixed to avoid squishing during transition
+  width: 320px;
   height: 100%;
-  overflow: hidden; // Ensure content doesn't spill out
+  overflow: hidden;
 }
 
-.collapse-trigger {
+.cc-collapse-handle {
   position: absolute;
   top: 50%;
-  right: -12px; // Position outside the container
+  right: -12px;
   transform: translateY(-50%);
   width: 12px;
-  height: 24px;
-  background-color: #121212;
-  border: 1px solid #1a1a1a;
+  height: 32px;
+  background-color: #1a1a1c;
+  border: 1px solid #2a2b2d;
   border-left: none;
   border-radius: 0 4px 4px 0;
   display: flex;
@@ -293,113 +279,130 @@ async function handleDelete(item: Record<string, any>, subIndex: number) {
   justify-content: center;
   cursor: pointer;
   z-index: 10;
+  color: #6a6a6a;
+  transition: all 0.15s ease;
+
+  svg {
+    width: 10px;
+    height: 10px;
+  }
 
   &:hover {
-    background-color: #252627;
-
-    :deep(.el-icon) {
-      color: #ffffff !important;
-    }
+    background-color: #252628;
+    color: #ffffff;
   }
 }
 
-.search-area {
+.cc-search-bar {
   display: flex;
   align-items: center;
-  padding: 16px 12px;
-  gap: 8px;
+  padding: 12px 16px;
+  gap: 10px;
+  flex-shrink: 0;
+}
 
-  .search-input-wrapper {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    height: 32px;
-    background-color: #252627;
-    border-radius: 4px;
-    padding: 0 8px;
-    border: 1px solid transparent;
-    transition: border-color 0.2s;
+.cc-search-input {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 36px;
+  background-color: #2d2d30;
+  border-radius: 6px;
+  padding: 0 12px;
+  transition: background-color 0.15s ease;
 
-    &:focus-within {
-      border-color: #4a4a4a;
-    }
-
-    .search-icon {
-      color: #8e8e8e;
-      margin-right: 6px;
-    }
-
-    .search-input {
-      flex: 1;
-      background: transparent;
-      border: none;
-      color: #e0e0e0;
-      font-size: 12px;
-      outline: none;
-
-      &::placeholder {
-        color: #666;
-      }
-    }
+  &:focus-within {
+    background-color: #38383b;
   }
 
-  .filter-btn {
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #252627;
-    border-radius: 4px;
-    cursor: pointer;
-    color: #e0e0e0;
-    transition: background-color 0.2s;
+  .cc-search-icon {
+    width: 16px;
+    height: 16px;
+    color: #6a6a6a;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
 
-    &:hover {
-      background-color: #333;
+  input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    font-size: 14px;
+    outline: none;
+    padding: 0;
+
+    &::placeholder {
+      color: #6a6a6a;
     }
   }
 }
 
-.scroll-content {
+.cc-filter-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #2d2d30;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #8a8a8a;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    background-color: #38383b;
+    color: #ffffff;
+  }
+}
+
+.cc-panel-scroll {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding-bottom: 20px;
+
+  &::-webkit-scrollbar {
+    width: 0;
+  }
 }
 
-.section-header {
+.cc-section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px 12px 16px;
-
-  .section-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #ffffff;
-  }
-
-  .header-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-
-    .change-btn {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 12px;
-      color: #8e8e8e;
-      cursor: pointer;
-
-      &:hover {
-        color: #ffffff;
-      }
-    }
-  }
+  padding: 8px 16px 16px 16px;
 }
 
-.list-wrapper {
-  padding: 0 8px;
+.cc-section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.cc-change-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #8a8a8a;
+  cursor: pointer;
+  transition: color 0.15s ease;
+
+  .cc-change-icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  &:hover {
+    color: #ffffff;
+  }
 }
 </style>

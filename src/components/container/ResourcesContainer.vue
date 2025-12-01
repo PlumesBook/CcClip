@@ -1,5 +1,5 @@
 <template>
-  <div class="flex h-full overflow-hidden relative">
+  <div class="flex h-full relative">
     <MenuList :activeIndex="defaultActiveIndex" @activeChange="activeHandler" />
     <ItemList :activeKey="state.activeItem.key" :defaultCollapse="store.hideSubMenu" :title="state.activeItem.title"
       @collapseChange="changeCollapse" />

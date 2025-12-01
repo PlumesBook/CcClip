@@ -183,12 +183,14 @@ body .el-loading-spinner .path{
     stroke-width: 4;
 }
 
+/* CapCut Style Input Reset */
 [type='text'], input:where(:not([type])), [type='email'], [type='url'], [type='password'], [type='number'], [type='date'], [type='datetime-local'], [type='month'], [type='search'], [type='tel'], [type='time'], [type='week'], [multiple], textarea, select {
-    @apply bg-gray-800 text-white border-gray-600;
+    background-color: transparent;
+    color: #e0e0e0;
+    border: none;
 }
 
 [type='text']:focus, input:where(:not([type])):focus, [type='email']:focus, [type='url']:focus, [type='password']:focus, [type='number']:focus, [type='date']:focus, [type='datetime-local']:focus, [type='month']:focus, [type='search']:focus, [type='tel']:focus, [type='time']:focus, [type='week']:focus, [multiple]:focus, textarea:focus, select:focus {
-    @apply ring-2 ring-yellow-400 ring-opacity-50;
     outline: none !important;
     box-shadow: none !important;
 }

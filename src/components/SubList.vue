@@ -1,44 +1,55 @@
 <template>
-  <div class="w-full flex flex-col pt-2 pl-2 pr-1 mt-2">
-    <div class="flex items-center justify-between pr-2">
-      <span class="mr-2 pl-2 mb-2 h-6 text-sm border-b border-gray-600 text-gray-300 select-none"> {{
-        listData.title }} </span>
+  <div class="cc-group">
+    <!-- Group Header -->
+    <div class="cc-group-header">
+      <span class="cc-group-title">{{ listData.title }}</span>
+      <span class="cc-group-more" v-if="!isUserUpload">查看全部</span>
     </div>
-    <div v-if="showUploadArea" class="mb-2 px-2">
-      <div
-        class="flex items-center justify-center h-16 border-2 border-dashed rounded-md cursor-pointer border-gray-600 hover:border-blue-400 text-xs text-gray-400 hover:text-blue-400 select-none transition-colors"
-        @click="triggerSelect" @dragover.prevent @drop.prevent="handleDrop">
-        <component :is="uploadIcon" class="text-base mr-2" />
+
+    <!-- Upload Area (only for user upload) -->
+    <div v-if="showUploadArea" class="cc-upload-area">
+      <div class="cc-upload-dropzone" @click="triggerSelect" @dragover.prevent @drop.prevent="handleDrop">
+        <component :is="uploadIcon" class="cc-upload-icon" />
         <span>{{ uploadHint }}</span>
       </div>
-      <input ref="fileInput" class="hidden" type="file" multiple :accept="acceptTypes" @change="handleFileChange">
+      <input ref="fileInput" class="cc-hidden-input" type="file" multiple :accept="acceptTypes" @change="handleFileChange">
     </div>
-    <ul class="flex flex-row flex-wrap">
-      <!-- 上传占位 -->
-      <li class="flex flex-col mb-2 p-1.5 relative" :class="{ 'w-full': isAudio, 'w-22': !isAudio, 'h-24': !isAudio }"
-        v-for="(item, index) in uploadingItems" :key="`uploading-${index}`">
-        <div
-          class="relative w-full h-full border border-[#333] rounded bg-[#1e1e1e] flex flex-col items-center justify-center overflow-hidden"
-          :class="{ 'h-20': isAudio, 'h-full': !isAudio }">
-          <component :is="uploadIcon" class="text-2xl text-gray-500 mb-1" />
-          <span class="text-xs text-gray-400 px-2 truncate max-w-full">{{ item.name }}</span>
-          <!-- 底部进度条 -->
-          <div class="absolute bottom-0 left-0 w-full h-1 bg-gray-700">
-            <div class="h-full bg-blue-500 transition-all duration-300" :style="{ width: (item.progress || 0) + '%' }">
+
+    <!-- Horizontal Scroll Container -->
+    <div class="cc-scroll-container" :class="{ 'is-audio': isAudio }">
+      <div class="cc-scroll-track">
+        <!-- Uploading Items -->
+        <div 
+          class="cc-card" 
+          :class="{ 'is-audio': isAudio }"
+          v-for="(item, index) in uploadingItems" 
+          :key="`uploading-${index}`"
+        >
+          <div class="cc-card-uploading">
+            <component :is="uploadIcon" class="cc-uploading-icon" />
+            <span class="cc-uploading-name">{{ item.name }}</span>
+            <div class="cc-progress">
+              <div class="cc-progress-bar" :style="{ width: (item.progress || 0) + '%' }"></div>
             </div>
           </div>
         </div>
-      </li>
-      <li class="flex flex-col mb-2 p-1.5" :class="{ 'w-full': isAudio }" v-for="(item, idnex) of listData.items"
-        :key="`${item.name}${item.cover}${idnex}`">
-        <template v-if="isAudio">
-          <AudioResourceItem :data="item" :type="type" :closable="isUserUpload" @delete="onDelete" />
-        </template>
-        <template v-else>
-          <OtherResource :data="item" :type="type" :closable="isUserUpload" @delete="onDelete" />
-        </template>
-      </li>
-    </ul>
+
+        <!-- Resource Items -->
+        <div 
+          class="cc-card" 
+          :class="{ 'is-audio': isAudio }" 
+          v-for="(item, idx) of listData.items"
+          :key="`${item.name}${item.cover}${idx}`"
+        >
+          <template v-if="isAudio">
+            <AudioResourceItem :data="item" :type="type" :closable="isUserUpload" @delete="onDelete" />
+          </template>
+          <template v-else>
+            <OtherResource :data="item" :type="type" :closable="isUserUpload" @delete="onDelete" />
+          </template>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -190,3 +201,154 @@ function startProgress(item: any) {
 }
 
 </script>
+
+<style lang="scss" scoped>
+.cc-group {
+  margin-bottom: 20px;
+}
+
+.cc-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px 12px 16px;
+}
+
+.cc-group-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #ffffff;
+}
+
+.cc-group-more {
+  font-size: 12px;
+  color: #6a6a6a;
+  cursor: pointer;
+  transition: color 0.15s ease;
+
+  &:hover {
+    color: #ffffff;
+  }
+}
+
+.cc-upload-area {
+  padding: 0 16px 12px 16px;
+}
+
+.cc-upload-dropzone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  border: 1px dashed #3a3b3d;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #6a6a6a;
+  user-select: none;
+  transition: all 0.15s ease;
+  background-color: rgba(45, 45, 48, 0.5);
+
+  &:hover {
+    border-color: #00B5FF;
+    color: #00B5FF;
+    background-color: rgba(0, 181, 255, 0.08);
+  }
+
+  .cc-upload-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+  }
+}
+
+.cc-hidden-input {
+  display: none;
+}
+
+.cc-scroll-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+
+  &.is-audio {
+    .cc-scroll-track {
+      flex-direction: column;
+      padding: 0 16px;
+    }
+
+    .cc-card {
+      width: 100%;
+      flex-shrink: 0;
+      margin-right: 0;
+      margin-bottom: 8px;
+    }
+  }
+}
+
+.cc-scroll-track {
+  display: flex;
+  flex-direction: row;
+  overflow-x: auto;
+  padding: 0 16px 8px 16px;
+  gap: 8px;
+
+  &::-webkit-scrollbar {
+    height: 0;
+  }
+}
+
+.cc-card {
+  flex-shrink: 0;
+  width: 136px;
+
+  &.is-audio {
+    width: 100%;
+  }
+}
+
+.cc-card-uploading {
+  position: relative;
+  width: 136px;
+  height: 100px;
+  border-radius: 8px;
+  background-color: #2d2d30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+
+  .cc-uploading-icon {
+    width: 28px;
+    height: 28px;
+    color: #5a5a5a;
+    margin-bottom: 8px;
+  }
+
+  .cc-uploading-name {
+    font-size: 11px;
+    color: #8a8a8a;
+    padding: 0 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+}
+
+.cc-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background-color: #1a1a1c;
+}
+
+.cc-progress-bar {
+  height: 100%;
+  background-color: #00B5FF;
+  transition: width 0.3s ease;
+}
+</style>

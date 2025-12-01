@@ -1,24 +1,19 @@
 <template>
-  <div class="relative w-full flex flex-row pr-1 border border-[#333] hover:border-gray-500 bg-[#1e1e1e] rounded"
-    draggable="true" @dragstart="dragStart">
-    <img class="w-20 h-20 rounded" :src="data.cover">
-    <div class="flex-1 flex flex-col">
-      <p class="max-h-10 overflow-clip text-sm flex-1 pl-3 mt-2">{{ data.name }}</p>
-      <span class="text-sm h-5 pl-3 mt-1"> {{ formatTime(data.time).str }} </span>
+  <div class="cc-audio-card" draggable="true" @dragstart="dragStart">
+    <img class="cc-audio-cover" :src="data.cover">
+    <div class="cc-audio-info">
+      <p class="cc-audio-name">{{ data.name }}</p>
+      <span class="cc-audio-time">{{ formatTime(data.time).str }}</span>
     </div>
-    <div class="absolute w-full h-full opacity-0 hover:opacity-100 transition-opacity duration-200">
-      <div class="cursor-pointer rounded w-20 h-20 bg-gray-900 opacity-70 flex justify-center items-center">
-        <ElIcon size="36" color="#fff">
-          <VideoPlay />
-        </ElIcon>
+    <div class="cc-audio-overlay">
+      <div class="cc-play-area">
+        <VideoPlay class="cc-play-icon" />
       </div>
-      <div v-if="closable" class="absolute top-1 right-1 z-10">
+      <div v-if="closable" class="cc-delete-btn">
         <el-button type="danger" :icon="Close" circle size="small" @click.stop="handleDelete" />
       </div>
-      <div class="absolute bottom-2 right-2 bg-blue-500 rounded-full w-6 h-6" @click="addTrack">
-        <ElIcon :size="16" color="#fff" class="cursor-pointer p-1 box-content">
-          <Plus />
-        </ElIcon>
+      <div class="cc-add-btn" @click="addTrack">
+        <Plus />
       </div>
     </div>
   </div>
@@ -93,3 +88,116 @@ function handleDelete() {
     });
 }
 </script>
+
+<style lang="scss" scoped>
+.cc-audio-card {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  padding-right: 4px;
+  border: 1px solid #2a2b2d;
+  background-color: #1e1f21;
+  border-radius: 6px;
+  transition: border-color 0.15s ease;
+
+  &:hover {
+    border-color: #00B5FF;
+
+    .cc-audio-overlay {
+      opacity: 1;
+    }
+  }
+}
+
+.cc-audio-cover {
+  width: 72px;
+  height: 72px;
+  border-radius: 6px 0 0 6px;
+  object-fit: cover;
+}
+
+.cc-audio-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  overflow: hidden;
+}
+
+.cc-audio-name {
+  max-height: 36px;
+  overflow: hidden;
+  font-size: 13px;
+  flex: 1;
+  color: #e0e0e0;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.cc-audio-time {
+  font-size: 12px;
+  height: 20px;
+  color: #6a6a6a;
+  margin-top: 4px;
+}
+
+.cc-audio-overlay {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  border-radius: 6px;
+}
+
+.cc-play-area {
+  cursor: pointer;
+  border-radius: 6px 0 0 6px;
+  width: 72px;
+  height: 72px;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  .cc-play-icon {
+    width: 32px;
+    height: 32px;
+    color: #ffffff;
+  }
+}
+
+.cc-delete-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 10;
+}
+
+.cc-add-btn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  background-color: #00B5FF;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #ffffff;
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  &:hover {
+    background-color: #00a3e6;
+  }
+}
+</style>
