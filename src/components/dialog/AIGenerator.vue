@@ -6,11 +6,13 @@
         <div>
           <h2 class="text-lg font-medium text-white flex items-center gap-2">
             <el-icon class="text-[#00b894]">
-              <VideoCamera />
+              <component :is="activeTab === 'video' ? VideoCamera : MagicStick" />
             </el-icon>
-            AI 视频生成
+            {{ activeTab === 'video' ? 'AI 视频生成' : 'AI 图片生成' }}
           </h2>
-          <p class="text-xs text-[#666] mt-1">描述您想要的画面，AI 将为您生成视频素材</p>
+          <p class="text-xs text-[#666] mt-1">
+            {{ activeTab === 'video' ? '描述您想要的画面，AI 将为您生成视频素材' : '描述您想要的画面，AI 将为您生成图片素材' }}
+          </p>
         </div>
 
         <!-- Task Retrieval & API Config -->
@@ -53,13 +55,62 @@
         </el-popover>
       </div>
 
+      <!-- Tabs (Only show if no specific type is enforced, or if we want to allow switching) -->
+      <!-- User request: "business logic is separate", so we should probably enforce the type -->
+      <div v-if="!type || type === 'all'" class="mb-6 flex bg-[#252525] p-1 rounded-lg">
+        <button class="flex-1 py-1.5 text-sm rounded-md transition-all flex items-center justify-center gap-2"
+          :class="activeTab === 'video' ? 'bg-[#333] text-white shadow-sm' : 'text-[#888] hover:text-[#bbb]'"
+          @click="activeTab = 'video'">
+          <el-icon>
+            <VideoPlay />
+          </el-icon>
+          视频生成
+        </button>
+        <button class="flex-1 py-1.5 text-sm rounded-md transition-all flex items-center justify-center gap-2"
+          :class="activeTab === 'image' ? 'bg-[#333] text-white shadow-sm' : 'text-[#888] hover:text-[#bbb]'"
+          @click="activeTab = 'image'">
+          <el-icon>
+            <Picture />
+          </el-icon>
+          图片生成
+        </button>
+      </div>
+
+      <!-- Config Form -->
+      <div class="mb-4 bg-[#252525] rounded-lg p-4 border border-[#333]">
+        <div v-if="activeTab === 'video'" class="space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-[#aaa]">模型</span>
+            <el-select v-model="videoConfig.model" size="small" class="w-40 cc-select">
+              <el-option label="Hailuo-2.3" value="MiniMax-Hailuo-2.3" />
+            </el-select>
+          </div>
+        </div>
+        <div v-else class="space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-[#aaa]">模型</span>
+            <el-select v-model="imageConfig.model" size="small" class="w-40 cc-select">
+              <el-option label="Image-01" value="image-01" />
+            </el-select>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-[#aaa]">比例</span>
+            <el-select v-model="imageConfig.aspectRatio" size="small" class="w-40 cc-select">
+              <el-option v-for="opt in aspectRatioOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+            </el-select>
+          </div>
+        </div>
+      </div>
+
       <!-- Input Area -->
       <div class="space-y-4 mb-8">
         <div class="relative">
           <el-input v-model="prompt" type="textarea" :rows="4" placeholder="例如：一只可爱的小猫在阳光下的草地上奔跑，电影质感，4k..."
             class="cc-textarea" resize="none" maxlength="500" show-word-limit />
           <div class="absolute bottom-2 left-2">
-            <el-tag size="small" type="info" effect="dark" class="bg-[#333] border-none text-[#888]">T2V</el-tag>
+            <el-tag size="small" type="info" effect="dark" class="bg-[#333] border-none text-[#888]">
+              {{ activeTab === 'video' ? 'T2V' : 'T2I' }}
+            </el-tag>
           </div>
         </div>
 
@@ -77,15 +128,15 @@
         class="flex-1 bg-[#1f1f1f] rounded-lg border border-[#2a2a2a] flex items-center justify-center relative overflow-hidden min-h-[300px]">
 
         <!-- Placeholder -->
-        <div v-if="!currentTask && !generatedVideoUrl" class="text-center text-[#555]">
+        <div v-if="!currentTask && !generatedVideoUrl && !generatedImageUrl" class="text-center text-[#555]">
           <el-icon :size="48" class="mb-2 opacity-30">
-            <Film />
+            <component :is="activeTab === 'video' ? Film : Picture" />
           </el-icon>
           <p class="text-sm">生成结果将在这里预览</p>
         </div>
 
         <!-- Loading State -->
-        <div v-if="currentTask && !generatedVideoUrl" class="text-center w-full px-10">
+        <div v-if="currentTask && !generatedVideoUrl && !generatedImageUrl" class="text-center w-full px-10">
           <div class="mb-4 relative w-20 h-20 mx-auto">
             <!-- Simple spinner or lottie placeholder -->
             <div class="absolute inset-0 border-4 border-[#333] rounded-full"></div>
@@ -93,7 +144,9 @@
             </div>
           </div>
           <h3 class="text-white font-medium mb-1">{{ statusText }}</h3>
-          <p class="text-xs text-[#666]">视频生成通常需要 1-3 分钟，请耐心等待...</p>
+          <p class="text-xs text-[#666]">
+            {{ activeTab === 'video' ? '视频生成通常需要 1-3 分钟，请耐心等待...' : '图片生成通常需要 10-30 秒，请耐心等待...' }}
+          </p>
           <div class="mt-2">
             <span class="text-[10px] text-[#444] bg-[#111] px-2 py-1 rounded font-mono select-all">TaskID: {{
               currentTask
@@ -101,11 +154,27 @@
           </div>
         </div>
 
-        <!-- Result Player -->
+        <!-- Result Player (Video) -->
         <div v-if="generatedVideoUrl" class="w-full h-full flex flex-col">
           <div class="flex-1 relative bg-black group h-[270px]">
             <video ref="videoRef" :src="generatedVideoUrl" class="w-full h-full object-contain" controls loop
               autoplay></video>
+          </div>
+          <div class="h-14 bg-[#252525] border-t border-[#333] flex items-center justify-between px-4">
+            <span class="text-xs text-[#888]">获取成功</span>
+            <div class="flex gap-1">
+              <el-button @click="clearResult" class="cc-btn-secondary">清除</el-button>
+              <el-button type="primary" @click="saveAndSelect" class="cc-btn-primary">
+                保存并使用
+              </el-button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Result Viewer (Image) -->
+        <div v-if="generatedImageUrl" class="w-full h-full flex flex-col">
+          <div class="flex-1 relative bg-black group h-[270px] flex items-center justify-center">
+            <img :src="generatedImageUrl" class="max-w-full max-h-full object-contain" />
           </div>
           <div class="h-14 bg-[#252525] border-t border-[#333] flex items-center justify-between px-4">
             <span class="text-xs text-[#888]">获取成功</span>
@@ -127,8 +196,16 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { MagicStick, VideoCamera, Film, Setting, Key } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
-import { getApiKey, setApiKey, generateVideo, queryTaskStatus, fetchFileDownloadUrl } from '@/api/minimax';
+import { getApiKey, setApiKey, generateVideo, queryTaskStatus, fetchFileDownloadUrl, generateImage } from '@/api/minimax';
 import { saveUploadResource, getUploadResources } from '@/utils/uploadStore';
+import { Picture, VideoPlay } from '@element-plus/icons-vue';
+
+const props = defineProps({
+  type: {
+    type: String,
+    default: '' // 'video', 'image', or empty for both
+  }
+});
 
 const emit = defineEmits(['select']);
 
@@ -140,7 +217,27 @@ const isGenerating = ref(false);
 const currentTask = ref<string | null>(null);
 const statusText = ref('正在加入队列...');
 const generatedVideoUrl = ref('');
+const generatedImageUrl = ref('');
 const pollTimer = ref<any>(null);
+
+const activeTab = ref<'video' | 'image'>(props.type === 'image' ? 'image' : 'video');
+
+const videoConfig = ref({
+  model: 'MiniMax-Hailuo-2.3'
+});
+
+const imageConfig = ref({
+  model: 'image-01',
+  aspectRatio: '1:1'
+});
+
+const aspectRatioOptions = [
+  { label: '1:1 (正方形)', value: '1:1' },
+  { label: '16:9 (横屏)', value: '16:9' },
+  { label: '9:16 (竖屏)', value: '9:16' },
+  { label: '4:3', value: '4:3' },
+  { label: '3:4', value: '3:4' },
+];
 
 // Retrieve Manual
 const retrieveInput = ref('');
@@ -155,25 +252,52 @@ function saveApiKey() {
 }
 
 // --- Generation Logic ---
+// --- Generation Logic ---
 async function handleGenerate() {
   if (!prompt.value.trim()) return;
 
   isGenerating.value = true;
   currentTask.value = null;
   generatedVideoUrl.value = '';
+  generatedImageUrl.value = '';
   statusText.value = '正在提交任务...';
 
   // Demo Mode: No API Key
   if (!hasApiKey.value) {
     currentTask.value = 'DEMO-' + Date.now();
-    await simulateDemoGeneration();
+    if (activeTab.value === 'video') {
+      await simulateDemoGeneration();
+    } else {
+      await simulateDemoImageGeneration();
+    }
     return;
   }
 
   try {
-    const { task_id } = await generateVideo({ prompt: prompt.value });
-    currentTask.value = task_id;
-    startPolling(task_id);
+    if (activeTab.value === 'video') {
+      const { task_id } = await generateVideo({
+        prompt: prompt.value,
+        model: videoConfig.value.model
+      });
+      currentTask.value = task_id;
+      startPolling(task_id);
+    } else {
+      const { id, image_urls } = await generateImage({
+        prompt: prompt.value,
+        model: imageConfig.value.model as any,
+        aspect_ratio: imageConfig.value.aspectRatio as any
+      });
+      currentTask.value = id;
+      if (image_urls && image_urls.length > 0) {
+        generatedImageUrl.value = image_urls[0];
+        statusText.value = '完成';
+        isGenerating.value = false;
+      } else {
+        // Fallback if async (though currently it seems sync)
+        statusText.value = '生成完成，但未返回图片链接';
+        isGenerating.value = false;
+      }
+    }
   } catch (e: any) {
     ElMessage.error(e.message || '生成失败');
     isGenerating.value = false;
@@ -208,6 +332,43 @@ async function simulateDemoGeneration() {
       ElMessage.warning('演示模式：请先上传一个视频素材');
       statusText.value = '无可用素材';
       currentTask.value = null;
+    }
+  } catch (e) {
+    console.error(e);
+    ElMessage.error('获取演示素材失败');
+    currentTask.value = null;
+  } finally {
+    isGenerating.value = false;
+  }
+}
+
+async function simulateDemoImageGeneration() {
+  const stages = [
+    { text: '排队中...', delay: 800 },
+    { text: '正在分析提示词...', delay: 1000 },
+    { text: '正在生成图片...', delay: 1500 },
+    { text: '正在优化细节...', delay: 1000 }
+  ];
+
+  for (const stage of stages) {
+    statusText.value = stage.text;
+    await sleep(stage.delay);
+  }
+
+  // Fetch user's first uploaded image
+  try {
+    const uploads = await getUploadResources('image');
+    if (uploads.length > 0) {
+      const firstImage = uploads[0];
+      const blobUrl = URL.createObjectURL(firstImage.file);
+      generatedImageUrl.value = blobUrl;
+      statusText.value = '完成 (演示)';
+      ElMessage.success('演示模式：已使用您上传的图片作为示例');
+    } else {
+      // Fallback to a placeholder if no uploads
+      generatedImageUrl.value = 'https://via.placeholder.com/512x512?text=Demo+Image';
+      statusText.value = '完成 (演示)';
+      ElMessage.success('演示模式：使用占位图片');
     }
   } catch (e) {
     console.error(e);
@@ -285,7 +446,11 @@ function clearResult() {
   if (generatedVideoUrl.value && generatedVideoUrl.value.startsWith('blob:')) {
     URL.revokeObjectURL(generatedVideoUrl.value);
   }
+  if (generatedImageUrl.value && generatedImageUrl.value.startsWith('blob:')) {
+    URL.revokeObjectURL(generatedImageUrl.value);
+  }
   generatedVideoUrl.value = '';
+  generatedImageUrl.value = '';
   currentTask.value = null;
 }
 
@@ -347,7 +512,7 @@ async function handleRetrieve() {
 
 // --- Save Logic ---
 async function saveAndSelect() {
-  if (!generatedVideoUrl.value) return;
+  if (!generatedVideoUrl.value && !generatedImageUrl.value) return;
 
   const loadingMsg = ElMessage({
     message: '正在保存到库...',
@@ -356,47 +521,86 @@ async function saveAndSelect() {
     grouping: true
   });
   try {
-    // 1. Get Blob (If it's already a blob url, we fetch it locally which is instant)
-    const res = await fetch(generatedVideoUrl.value);
-    const blob = await res.blob();
-    const file = new File([blob], `ai_gen_${Date.now()}.mp4`, { type: 'video/mp4' });
+    if (activeTab.value === 'video') {
+      // 1. Get Blob (If it's already a blob url, we fetch it locally which is instant)
+      const res = await fetch(generatedVideoUrl.value);
+      const blob = await res.blob();
+      const file = new File([blob], `ai_video_${Date.now()}.mp4`, { type: 'video/mp4' });
 
-    // 2. Get Meta (Width/Height/Duration)
-    // We can use a temp video element to get metadata
-    const meta = await getVideoMetadata(file);
+      // 2. Get Meta (Width/Height/Duration)
+      const meta = await getVideoMetadata(file);
 
-    // 3. Save to IDB
-    const { id } = await saveUploadResource({
-      activeKey: 'video', // Default to video category
-      groupType: 'video',
-      groupTitle: '我的上传',
-      name: (prompt.value.slice(0, 20) || 'AI 生成视频'),
-      format: 'mp4',
-      cover: meta.cover,
-      width: meta.width,
-      height: meta.height,
-      fps: 30, // Default assumption
-      frameCount: Math.floor(meta.duration * 30),
-      time: meta.duration * 1000, // ms
-      file: file,
-      isAI: true // <--- Important
-    });
+      // 3. Save to IDB
+      const { id } = await saveUploadResource({
+        activeKey: 'video',
+        groupType: 'video',
+        groupTitle: '我的上传',
+        name: (prompt.value.slice(0, 20) || 'AI 生成视频'),
+        format: 'mp4',
+        cover: meta.cover,
+        width: meta.width,
+        height: meta.height,
+        fps: 30,
+        frameCount: Math.floor(meta.duration * 30),
+        time: meta.duration * 1000,
+        file: file,
+        isAI: true
+      });
 
-    // 4. Emit select event (Mock item structure matching ResourceSelectDialog)
-    const item = {
-      id, // Use uploadId as ID
-      uploadId: id,
-      name: prompt.value.slice(0, 20),
-      cover: meta.cover, // blob url
-      source: URL.createObjectURL(file),
-      width: meta.width,
-      height: meta.height,
-      time: meta.duration * 1000,
-      _isUpload: true,
-      isAI: true
-    };
+      // 4. Emit select event
+      const item = {
+        id,
+        uploadId: id,
+        name: prompt.value.slice(0, 20),
+        cover: meta.cover,
+        source: URL.createObjectURL(file),
+        width: meta.width,
+        height: meta.height,
+        time: meta.duration * 1000,
+        _isUpload: true,
+        isAI: true
+      };
+      emit('select', item);
 
-    emit('select', item);
+    } else {
+      // Image Save Logic
+      const res = await fetch(generatedImageUrl.value);
+      const blob = await res.blob();
+      const file = new File([blob], `ai_image_${Date.now()}.png`, { type: 'image/png' });
+
+      // Get Image Meta
+      const meta = await getImageMetadata(file);
+
+      const { id } = await saveUploadResource({
+        activeKey: 'image',
+        groupType: 'image',
+        groupTitle: '我的上传',
+        name: (prompt.value.slice(0, 20) || 'AI 生成图片'),
+        format: 'png',
+        cover: meta.url, // For image, cover is itself
+        width: meta.width,
+        height: meta.height,
+        fps: 0,
+        frameCount: 0,
+        time: 0, // Image duration is 0 or default
+        file: file,
+        isAI: true
+      });
+
+      const item = {
+        id,
+        uploadId: id,
+        name: prompt.value.slice(0, 20),
+        cover: meta.url,
+        source: meta.url,
+        width: meta.width,
+        height: meta.height,
+        time: 3000, // Default duration for image in track
+        _isUpload: true,
+        isAI: true
+      };
+      emit('select', item);
+    }
 
   } catch (e) {
     console.error(e);
@@ -404,6 +608,22 @@ async function saveAndSelect() {
   } finally {
     loadingMsg.close();
   }
+}
+
+function getImageMetadata(file: File): Promise<{ width: number, height: number, url: string }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      resolve({
+        width: img.width,
+        height: img.height,
+        url: url
+      });
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
 }
 
 // Helper to get video metadata
@@ -444,6 +664,9 @@ onUnmounted(() => {
   if (generatedVideoUrl.value && generatedVideoUrl.value.startsWith('blob:')) {
     URL.revokeObjectURL(generatedVideoUrl.value);
   }
+  if (generatedImageUrl.value && generatedImageUrl.value.startsWith('blob:')) {
+    URL.revokeObjectURL(generatedImageUrl.value);
+  }
 });
 
 </script>
@@ -476,6 +699,17 @@ onUnmounted(() => {
 :deep(.cc-textarea .el-textarea__inner:focus) {
   border-color: #00b894;
   box-shadow: 0 0 0 1px #00b894;
+}
+
+:deep(.cc-select .el-input__wrapper) {
+  background-color: #333;
+  box-shadow: none;
+  border: 1px solid #444;
+  color: #eee;
+}
+
+:deep(.cc-select .el-input__inner) {
+  color: #eee;
 }
 
 /* Buttons */

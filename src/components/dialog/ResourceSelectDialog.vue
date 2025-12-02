@@ -7,7 +7,7 @@
       <div class="w-[200px] flex-shrink-0 bg-[#1f1f1f] border-r border-[#2a2a2a] flex flex-col py-4">
 
         <!-- AI Tool Entry -->
-        <div v-if="resourceType === 'video'" class="px-2 mb-4">
+        <div v-if="['video', 'image'].includes(resourceType)" class="px-2 mb-4">
           <div
             class="cursor-pointer px-3 py-2.5 rounded-md text-sm flex items-center gap-3 transition-all duration-200 select-none"
             :class="isAIActive ? 'bg-gradient-to-r from-[#00b894]/20 to-transparent text-[#00b894] font-medium border border-[#00b894]/30' : 'text-[#ccc] hover:bg-[#2a2a2a]'"
@@ -44,7 +44,7 @@
 
         <!-- AI Generator View -->
         <div v-if="isAIActive" class="absolute inset-0 z-10">
-          <AIGenerator @select="handleAISelect" />
+          <AIGenerator :type="resourceType" @select="handleAISelect" />
         </div>
 
         <!-- Standard Grid View -->
@@ -102,7 +102,7 @@
                     <p class="text-xs text-white truncate drop-shadow-md">{{ item.name }}</p>
                     <p class="text-[10px] text-[#ccc] truncate scale-90 origin-left mt-0.5">{{ item.width }}x{{
                       item.height
-                    }}</p>
+                      }}</p>
                   </div>
 
                   <!-- Selected Check -->

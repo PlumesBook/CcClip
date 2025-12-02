@@ -33,7 +33,7 @@ export async function generateVideo(params: GenerateParams): Promise<{ task_id: 
 
   // 1. Create Task: POST /v1/video_generation
   const url = `${BASE_URL}/video_generation`;
-  
+
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -61,7 +61,7 @@ export async function generateVideo(params: GenerateParams): Promise<{ task_id: 
 
 export async function queryTaskStatus(taskId: string): Promise<TaskStatus> {
   const apiKey = getApiKey();
-  
+
   // 2. Query Task: GET /v1/query/video_generation?task_id={task_id}
   // Note: Official docs might be slightly confusing, but standard practice for MiniMax 
   // asynchronous tasks is often /query/video_generation or /video_generation/task
@@ -76,13 +76,13 @@ export async function queryTaskStatus(taskId: string): Promise<TaskStatus> {
   });
 
   if (!response.ok) {
-     throw new Error(`Status check failed: ${response.status}`);
+    throw new Error(`Status check failed: ${response.status}`);
   }
 
   const data = await response.json();
-  
+
   let status: TaskStatus['status'] = 'Processing';
-  
+
   // API returns lowercase status usually
   const apiStatus = (data.status || '').toLowerCase();
   if (apiStatus === 'success') status = 'Success';
@@ -91,50 +91,94 @@ export async function queryTaskStatus(taskId: string): Promise<TaskStatus> {
   else status = 'Processing';
 
   if (status === 'Success') {
-      let downloadUrl = '';
-      if (data.file_id) {
-          try {
-            downloadUrl = await fetchFileDownloadUrl(data.file_id);
-          } catch (e) {
-            console.warn('Failed to fetch download url', e);
-          }
+    let downloadUrl = '';
+    if (data.file_id) {
+      try {
+        downloadUrl = await fetchFileDownloadUrl(data.file_id);
+      } catch (e) {
+        console.warn('Failed to fetch download url', e);
       }
+    }
 
-      return {
-          status: 'Success',
-          file_id: data.file_id,
-          download_url: downloadUrl
-      };
+    return {
+      status: 'Success',
+      file_id: data.file_id,
+      download_url: downloadUrl
+    };
   }
 
   return {
-      status,
-      error: data.base_resp?.status_msg
+    status,
+    error: data.base_resp?.status_msg
   };
 }
 
 export async function fetchFileDownloadUrl(fileId: string): Promise<string> {
-   const apiKey = getApiKey();
-   // 3. Retrieve File: GET /v1/files/retrieve?file_id={file_id}
-   const url = `${BASE_URL}/files/retrieve?file_id=${fileId}`;
-   
-   const response = await fetch(url, {
-     method: 'GET',
-     headers: {
-       'Authorization': `Bearer ${apiKey}`
-     }
-   });
+  const apiKey = getApiKey();
+  // 3. Retrieve File: GET /v1/files/retrieve?file_id={file_id}
+  const url = `${BASE_URL}/files/retrieve?file_id=${fileId}`;
 
-   if (!response.ok) {
-      throw new Error('Failed to retrieve file info');
-   }
-   
-   const data = await response.json();
-   
-   // Expected response: { file: { download_url: "..." } }
-   if (data.file && data.file.download_url) {
-       return data.file.download_url;
-   }
-   
-   return ''; 
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to retrieve file info');
+  }
+
+  const data = await response.json();
+
+  // Expected response: { file: { download_url: "..." } }
+  if (data.file && data.file.download_url) {
+    return data.file.download_url;
+  }
+
+  return '';
+}
+
+export interface ImageGenerateParams {
+  prompt: string;
+  model?: 'image-01' | 'image-01-live';
+  aspect_ratio?: '1:1' | '16:9' | '4:3' | '3:2' | '2:3' | '3:4' | '9:16' | '21:9';
+}
+
+export async function generateImage(params: ImageGenerateParams): Promise<{ id: string, image_urls: string[] }> {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    throw new Error('请先设置 MiniMax API Key');
+  }
+
+  const url = `${BASE_URL}/image_generation`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: params.model || 'image-01',
+      prompt: params.prompt,
+      aspect_ratio: params.aspect_ratio || '1:1',
+      response_format: 'url'
+    })
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.base_resp?.status_msg || `Request failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (data.base_resp && data.base_resp.status_code !== 0) {
+    throw new Error(data.base_resp.status_msg || 'Unknown error');
+  }
+
+  return {
+    id: data.id,
+    image_urls: data.data?.image_urls || []
+  };
 }
