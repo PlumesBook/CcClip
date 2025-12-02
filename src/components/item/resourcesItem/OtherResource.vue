@@ -113,7 +113,6 @@ function handleDelete() {
 <style lang="scss" scoped>
 .cc-resource-card {
   display: block;
-  width: 136px;
   cursor: pointer;
 
   &:hover {
@@ -133,18 +132,21 @@ function handleDelete() {
 
 .cc-thumb-wrapper {
   position: relative;
-  width: 136px;
   height: 100px;
   border-radius: 8px;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cc-resource-thumb {
-  width: 100%;
+  width: auto;
   height: 100%;
+  max-width: 200px;
   display: block;
   user-select: none;
-  object-fit: cover;
+  object-fit: contain;
   background-color: #2d2d30;
   transition: opacity 0.15s ease;
 }
@@ -153,7 +155,7 @@ function handleDelete() {
   display: block;
   margin-top: 6px;
   font-size: 12px;
-  width: 100%;
+  max-width: 200px;
   text-align: left;
   user-select: none;
   color: #a0a0a0;

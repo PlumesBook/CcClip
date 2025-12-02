@@ -300,7 +300,6 @@ function startProgress(item: any) {
 
 .cc-card {
   flex-shrink: 0;
-  width: 136px;
 
   &.is-audio {
     width: 100%;

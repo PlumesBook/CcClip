@@ -75,18 +75,14 @@
             </div>
 
             <!-- Grid -->
-            <div v-else class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              <div v-for="(item, idx) in filteredList" :key="idx"
-                class="group relative bg-[#252525] rounded-lg overflow-hidden cursor-pointer border border-transparent transition-all duration-200 hover:border-[#444]"
-                :class="isItemSelected(item) ? 'ring-2 ring-[#00b894] ring-offset-1 ring-offset-[#181818]' : ''"
-                @click="selectItem(item)" @dblclick="handleDbClick(item)">
+            <div v-else class="resource-grid">
+              <div v-for="(item, idx) in filteredList" :key="idx" class="resource-card group"
+                :class="{ 'selected': isItemSelected(item) }" @click="selectItem(item)" @dblclick="handleDbClick(item)">
                 <!-- Thumbnail -->
-                <div class="aspect-video w-full overflow-hidden relative">
-                  <img :src="item.cover || item.source"
-                    class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    loading="lazy" @error="handleImgError" />
+                <div class="resource-thumb-container">
+                  <img :src="item.cover || item.source" class="resource-img" loading="lazy" @error="handleImgError" />
                   <!-- Overlay -->
-                  <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors"></div>
+                  <div class="resource-overlay"></div>
 
                   <!-- AI Badge -->
                   <div v-if="item.isAI" class="absolute top-1.5 left-1.5">
@@ -119,8 +115,8 @@
                 </div>
 
                 <!-- Filename Footer (Upload Items Only) -->
-                <div v-if="item._isUpload" class="px-2 py-1.5 bg-[#1f1f1f] border-t border-[#333]">
-                  <p class="text-[11px] text-[#999] truncate">{{ item.name }}</p>
+                <div v-if="item._isUpload" class="resource-filename">
+                  <p class="text-[12px] truncate">{{ item.name }}</p>
                 </div>
               </div>
             </div>
@@ -330,6 +326,76 @@ watch(() => props.modelValue, (val) => {
 </script>
 
 <style scoped>
+.resource-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.resource-card {
+  position: relative;
+  background-color: #252525;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+  display: inline-flex;
+  flex-direction: column;
+}
+
+.resource-card:hover {
+  border-color: #444;
+}
+
+.resource-card.selected {
+  border-color: #00b894;
+  box-shadow: 0 0 0 2px #00b894;
+}
+
+.resource-thumb-container {
+  position: relative;
+  height: 160px;
+  overflow: hidden;
+  line-height: 0;
+}
+
+.resource-img {
+  height: 160px;
+  width: auto;
+  max-width: 280px;
+  object-fit: contain;
+  display: block;
+  transition: transform 0.5s;
+}
+
+.resource-card:hover .resource-img {
+  transform: scale(1.05);
+}
+
+.resource-overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0);
+  transition: background-color 0.2s;
+}
+
+.resource-card:hover .resource-overlay {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.resource-filename {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  width: 100%;
+  padding: 2px 8px;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(1px);
+  box-sizing: border-box;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
 }
