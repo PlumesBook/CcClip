@@ -1,53 +1,54 @@
 <template>
-  <div class="h-full flex flex-col bg-[#181818] text-[#e0e0e0] relative">
-    <div class="flex-1 flex flex-col p-6 overflow-y-auto custom-scrollbar">
+  <div class="ai-generator-container">
+    <div class="scroll-area custom-scrollbar">
       <!-- Header -->
-      <div class="mb-6 flex justify-between items-start">
-        <div>
-          <h2 class="text-lg font-medium text-white flex items-center gap-2">
-            <el-icon class="text-[#00b894]">
+      <div class="header-section">
+        <div class="title-group">
+          <h2 class="main-title">
+            <el-icon class="title-icon">
               <component :is="activeTab === 'video' ? VideoCamera : MagicStick" />
             </el-icon>
             {{ activeTab === 'video' ? 'AI 视频生成' : 'AI 图片生成' }}
           </h2>
-          <p class="text-xs text-[#666] mt-1">
+          <p class="sub-title">
             {{ activeTab === 'video' ? '描述您想要的画面，AI 将为您生成视频素材' : '描述您想要的画面，AI 将为您生成图片素材' }}
           </p>
         </div>
 
         <!-- Task Retrieval & API Config -->
-        <el-popover placement="bottom" :width="320" trigger="click">
+        <el-popover placement="bottom" :width="320" trigger="click" popper-class="cc-popover">
           <template #reference>
-            <el-button link size="small" class="text-[#666] hover:text-[#00b894]">
+            <el-button link size="small" class="settings-btn">
               <el-icon class="mr-1">
                 <Setting />
               </el-icon>
               设置
             </el-button>
           </template>
-          <div class="space-y-4">
+          <div class="settings-panel">
             <!-- API Key Config -->
-            <div class="p-3 bg-[#f5f5f5] rounded-lg">
-              <h4 class="text-sm font-medium mb-2 text-[#333] flex items-center gap-1">
-                <el-icon class="text-[#00b894]">
+            <div class="setting-group">
+              <h4 class="group-title">
+                <el-icon class="group-icon">
                   <Key />
                 </el-icon>
                 API 配置
               </h4>
               <el-input v-model="apiKeyInput" size="small" placeholder="输入 MiniMax API Key..." type="password"
-                show-password class="mb-2" />
-              <el-button type="primary" size="small" class="w-full" @click="saveApiKey">
+                show-password class="mb-2 cc-input" />
+              <el-button type="primary" size="small" class="w-full cc-btn-primary" @click="saveApiKey">
                 {{ apiKeyInput ? (hasApiKey ? '更新 Key' : '保存 Key') : '清除 Key' }}
               </el-button>
-              <p class="text-[10px] text-[#999] mt-1">{{ hasApiKey ? '✓ 已配置' : '未配置时将使用演示模式' }}</p>
+              <p class="status-text">{{ hasApiKey ? '✓ 已配置' : '未配置时将使用演示模式' }}</p>
             </div>
 
             <!-- Task Retrieval -->
-            <div class="p-3 bg-[#f5f5f5] rounded-lg">
-              <h4 class="text-sm font-medium mb-2 text-[#333]">找回历史任务</h4>
-              <el-input v-model="retrieveInput" size="small" placeholder="输入 Task ID / File ID..." class="mb-2" />
-              <el-button type="primary" size="small" class="w-full" :loading="isRetrieving" @click="handleRetrieve"
-                :disabled="!retrieveInput || !hasApiKey">
+            <div class="setting-group">
+              <h4 class="group-title">找回历史任务</h4>
+              <el-input v-model="retrieveInput" size="small" placeholder="输入 Task ID / File ID..."
+                class="mb-2 cc-input" />
+              <el-button type="primary" size="small" class="w-full cc-btn-primary" :loading="isRetrieving"
+                @click="handleRetrieve" :disabled="!retrieveInput || !hasApiKey">
                 获取视频
               </el-button>
             </div>
@@ -55,20 +56,15 @@
         </el-popover>
       </div>
 
-      <!-- Tabs (Only show if no specific type is enforced, or if we want to allow switching) -->
-      <!-- User request: "business logic is separate", so we should probably enforce the type -->
-      <div v-if="!type || type === 'all'" class="mb-6 flex bg-[#252525] p-1 rounded-lg">
-        <button class="flex-1 py-1.5 text-sm rounded-md transition-all flex items-center justify-center gap-2"
-          :class="activeTab === 'video' ? 'bg-[#333] text-white shadow-sm' : 'text-[#888] hover:text-[#bbb]'"
-          @click="activeTab = 'video'">
+      <!-- Tabs -->
+      <div v-if="!type || type === 'all'" class="type-tabs">
+        <button class="tab-btn" :class="{ 'is-active': activeTab === 'video' }" @click="activeTab = 'video'">
           <el-icon>
             <VideoPlay />
           </el-icon>
           视频生成
         </button>
-        <button class="flex-1 py-1.5 text-sm rounded-md transition-all flex items-center justify-center gap-2"
-          :class="activeTab === 'image' ? 'bg-[#333] text-white shadow-sm' : 'text-[#888] hover:text-[#bbb]'"
-          @click="activeTab = 'image'">
+        <button class="tab-btn" :class="{ 'is-active': activeTab === 'image' }" @click="activeTab = 'image'">
           <el-icon>
             <Picture />
           </el-icon>
@@ -77,25 +73,25 @@
       </div>
 
       <!-- Config Form -->
-      <div class="mb-4 bg-[#252525] rounded-lg p-4 border border-[#333]">
-        <div v-if="activeTab === 'video'" class="space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="text-xs text-[#aaa]">模型</span>
-            <el-select v-model="videoConfig.model" size="small" class="w-40 cc-select">
+      <div class="config-panel">
+        <div v-if="activeTab === 'video'" class="config-items">
+          <div class="config-item">
+            <span class="label">模型</span>
+            <el-select v-model="videoConfig.model" size="small" class="config-select cc-select">
               <el-option label="Hailuo-2.3" value="MiniMax-Hailuo-2.3" />
             </el-select>
           </div>
         </div>
-        <div v-else class="space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="text-xs text-[#aaa]">模型</span>
-            <el-select v-model="imageConfig.model" size="small" class="w-40 cc-select">
+        <div v-else class="config-items">
+          <div class="config-item">
+            <span class="label">模型</span>
+            <el-select v-model="imageConfig.model" size="small" class="config-select cc-select">
               <el-option label="Image-01" value="image-01" />
             </el-select>
           </div>
-          <div class="flex items-center justify-between">
-            <span class="text-xs text-[#aaa]">比例</span>
-            <el-select v-model="imageConfig.aspectRatio" size="small" class="w-40 cc-select">
+          <div class="config-item">
+            <span class="label">比例</span>
+            <el-select v-model="imageConfig.aspectRatio" size="small" class="config-select cc-select">
               <el-option v-for="opt in aspectRatioOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
             </el-select>
           </div>
@@ -103,20 +99,20 @@
       </div>
 
       <!-- Input Area -->
-      <div class="space-y-4 mb-8">
-        <div class="relative">
+      <div class="input-section">
+        <div class="textarea-wrapper">
           <el-input v-model="prompt" type="textarea" :rows="4" placeholder="例如：一只可爱的小猫在阳光下的草地上奔跑，电影质感，4k..."
             class="cc-textarea" resize="none" maxlength="500" show-word-limit />
-          <div class="absolute bottom-2 left-2">
-            <el-tag size="small" type="info" effect="dark" class="bg-[#333] border-none text-[#888]">
+          <div class="model-tag-wrapper">
+            <el-tag size="small" type="info" effect="dark" class="model-tag">
               {{ activeTab === 'video' ? 'T2V' : 'T2I' }}
             </el-tag>
           </div>
         </div>
 
-        <div class="flex justify-between items-center">
-          <span class="text-xs text-[#666]">{{ hasApiKey ? '* 生成一次消耗约 ¥3-5 元' : '* 演示模式 (未配置API)' }}</span>
-          <el-button type="primary" class="cc-btn-primary px-8" :loading="isGenerating" @click="handleGenerate"
+        <div class="action-bar">
+          <span class="cost-tip">{{ hasApiKey ? '* 生成一次消耗约 ¥3-5 元' : '* 演示模式 (未配置API)' }}</span>
+          <el-button type="primary" class="cc-btn-primary generate-btn" :loading="isGenerating" @click="handleGenerate"
             :disabled="!prompt.trim()">
             {{ isGenerating ? '生成中...' : '立即生成' }}
           </el-button>
@@ -124,45 +120,39 @@
       </div>
 
       <!-- Progress / Result Area -->
-      <div
-        class="flex-1 bg-[#1f1f1f] rounded-lg border border-[#2a2a2a] flex items-center justify-center relative overflow-hidden min-h-[300px]">
+      <div class="result-area">
 
         <!-- Placeholder -->
-        <div v-if="!currentTask && !generatedVideoUrl && !generatedImageUrl" class="text-center text-[#555]">
-          <el-icon :size="48" class="mb-2 opacity-30">
+        <div v-if="!currentTask && !generatedVideoUrl && !generatedImageUrl" class="placeholder-state">
+          <el-icon :size="48" class="placeholder-icon">
             <component :is="activeTab === 'video' ? Film : Picture" />
           </el-icon>
-          <p class="text-sm">生成结果将在这里预览</p>
+          <p>生成结果将在这里预览</p>
         </div>
 
         <!-- Loading State -->
-        <div v-if="currentTask && !generatedVideoUrl && !generatedImageUrl" class="text-center w-full px-10">
-          <div class="mb-4 relative w-20 h-20 mx-auto">
-            <!-- Simple spinner or lottie placeholder -->
-            <div class="absolute inset-0 border-4 border-[#333] rounded-full"></div>
-            <div class="absolute inset-0 border-4 border-[#00b894] rounded-full border-t-transparent animate-spin">
-            </div>
+        <div v-if="currentTask && !generatedVideoUrl && !generatedImageUrl" class="loading-state">
+          <div class="spinner-wrapper">
+            <div class="spinner-bg"></div>
+            <div class="spinner-active"></div>
           </div>
-          <h3 class="text-white font-medium mb-1">{{ statusText }}</h3>
-          <p class="text-xs text-[#666]">
+          <h3 class="status-title">{{ statusText }}</h3>
+          <p class="status-desc">
             {{ activeTab === 'video' ? '视频生成通常需要 1-3 分钟，请耐心等待...' : '图片生成通常需要 10-30 秒，请耐心等待...' }}
           </p>
-          <div class="mt-2">
-            <span class="text-[10px] text-[#444] bg-[#111] px-2 py-1 rounded font-mono select-all">TaskID: {{
-              currentTask
-              }}</span>
+          <div class="task-id-wrapper">
+            <span class="task-id">TaskID: {{ currentTask }}</span>
           </div>
         </div>
 
         <!-- Result Player (Video) -->
-        <div v-if="generatedVideoUrl" class="w-full h-full flex flex-col">
-          <div class="flex-1 relative bg-black group h-[270px]">
-            <video ref="videoRef" :src="generatedVideoUrl" class="w-full h-full object-contain" controls loop
-              autoplay></video>
+        <div v-if="generatedVideoUrl" class="result-content">
+          <div class="preview-box">
+            <video ref="videoRef" :src="generatedVideoUrl" class="preview-media" controls loop autoplay></video>
           </div>
-          <div class="h-14 bg-[#252525] border-t border-[#333] flex items-center justify-between px-4">
-            <span class="text-xs text-[#888]">获取成功</span>
-            <div class="flex gap-1">
+          <div class="result-actions">
+            <span class="success-text">获取成功</span>
+            <div class="btn-group">
               <el-button @click="clearResult" class="cc-btn-secondary">清除</el-button>
               <el-button type="primary" @click="saveAndSelect" class="cc-btn-primary">
                 保存并使用
@@ -172,13 +162,13 @@
         </div>
 
         <!-- Result Viewer (Image) -->
-        <div v-if="generatedImageUrl" class="w-full h-full flex flex-col">
-          <div class="flex-1 relative bg-black group h-[270px] flex items-center justify-center">
-            <img :src="generatedImageUrl" class="max-w-full max-h-full object-contain" />
+        <div v-if="generatedImageUrl" class="result-content">
+          <div class="preview-box">
+            <img :src="generatedImageUrl" class="preview-media" />
           </div>
-          <div class="h-14 bg-[#252525] border-t border-[#333] flex items-center justify-between px-4">
-            <span class="text-xs text-[#888]">获取成功</span>
-            <div class="flex gap-1">
+          <div class="result-actions">
+            <span class="success-text">获取成功</span>
+            <div class="btn-group">
               <el-button @click="clearResult" class="cc-btn-secondary">清除</el-button>
               <el-button type="primary" @click="saveAndSelect" class="cc-btn-primary">
                 保存并使用
@@ -671,18 +661,313 @@ onUnmounted(() => {
 
 </script>
 
-<style scoped>
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
+<style lang="scss" scoped>
+.ai-generator-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #181818;
+  color: #e0e0e0;
+  position: relative;
 }
 
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
+.scroll-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  overflow-y: auto;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #333;
-  border-radius: 4px;
+.header-section {
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+
+  .title-group {
+    .main-title {
+      font-size: 18px;
+      font-weight: 500;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .title-icon {
+        color: #00b894;
+      }
+    }
+
+    .sub-title {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+    }
+  }
+
+  .settings-btn {
+    color: #666;
+
+    &:hover {
+      color: #00b894;
+    }
+  }
+}
+
+.type-tabs {
+  margin-bottom: 24px;
+  display: flex;
+  background-color: #252525;
+  padding: 4px;
+  border-radius: 8px;
+
+  .tab-btn {
+    flex: 1;
+    padding: 6px 0;
+    font-size: 14px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: transparent;
+    border: none;
+    color: #888;
+    cursor: pointer;
+
+    &:hover {
+      color: #bbb;
+    }
+
+    &.is-active {
+      background-color: #333;
+      color: white;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+  }
+}
+
+.config-panel {
+  margin-bottom: 16px;
+  background-color: #252525;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid #333;
+
+  .config-items {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .config-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .label {
+      font-size: 12px;
+      color: #aaa;
+    }
+
+    .config-select {
+      width: 160px;
+    }
+  }
+}
+
+.input-section {
+  margin-bottom: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  .textarea-wrapper {
+    position: relative;
+
+    .model-tag-wrapper {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+    }
+
+    .model-tag {
+      background-color: #333;
+      border: none;
+      color: #888;
+    }
+  }
+
+  .action-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .cost-tip {
+      font-size: 12px;
+      color: #666;
+    }
+
+    .generate-btn {
+      padding: 0 32px;
+    }
+  }
+}
+
+.result-area {
+  flex: 1;
+  background-color: #1f1f1f;
+  border-radius: 8px;
+  border: 1px solid #2a2a2a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  min-height: 300px;
+}
+
+.placeholder-state {
+  text-align: center;
+  color: #555;
+
+  .placeholder-icon {
+    margin-bottom: 8px;
+    opacity: 0.3;
+  }
+
+  p {
+    font-size: 14px;
+  }
+}
+
+.loading-state {
+  text-align: center;
+  width: 100%;
+  padding: 0 40px;
+
+  .spinner-wrapper {
+    margin: 0 auto 16px;
+    position: relative;
+    width: 80px;
+    height: 80px;
+
+    .spinner-bg {
+      position: absolute;
+      inset: 0;
+      border: 4px solid #333;
+      border-radius: 50%;
+    }
+
+    .spinner-active {
+      position: absolute;
+      inset: 0;
+      border: 4px solid #00b894;
+      border-radius: 50%;
+      border-top-color: transparent;
+      animation: spin 1s linear infinite;
+    }
+  }
+
+  .status-title {
+    color: white;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  .status-desc {
+    font-size: 12px;
+    color: #666;
+  }
+
+  .task-id-wrapper {
+    margin-top: 8px;
+
+    .task-id {
+      font-size: 10px;
+      color: #444;
+      background-color: #111;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      user-select: all;
+    }
+  }
+}
+
+.result-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+
+  .preview-box {
+    flex: 1;
+    position: relative;
+    background-color: black;
+    height: 270px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .preview-media {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+  }
+
+  .result-actions {
+    height: 56px;
+    background-color: #252525;
+    border-top: 1px solid #333;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+
+    .success-text {
+      font-size: 12px;
+      color: #888;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 4px;
+    }
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Global/Common overrides
+.custom-scrollbar {
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: #333;
+    border-radius: 4px;
+
+    &:hover {
+      background-color: #444;
+    }
+  }
 }
 
 /* Inputs */
@@ -693,12 +978,12 @@ onUnmounted(() => {
   border: 1px solid #333;
   color: #eee;
   border-radius: 6px;
-}
 
-:deep(.cc-input .el-input__wrapper.is-focus),
-:deep(.cc-textarea .el-textarea__inner:focus) {
-  border-color: #00b894;
-  box-shadow: 0 0 0 1px #00b894;
+  &.is-focus,
+  &:focus {
+    border-color: #00b894;
+    box-shadow: 0 0 0 1px #00b894;
+  }
 }
 
 :deep(.cc-select .el-input__wrapper) {
@@ -717,27 +1002,63 @@ onUnmounted(() => {
   background-color: #00b894;
   border-color: #00b894;
   color: white;
-}
 
-.cc-btn-primary:hover {
-  background-color: #00a383;
-  border-color: #00a383;
-}
+  &:hover {
+    background-color: #00a383;
+    border-color: #00a383;
+  }
 
-.cc-btn-primary:disabled {
-  background-color: #2a2a2a;
-  border-color: #333;
-  color: #555;
+  &:disabled {
+    background-color: #2a2a2a;
+    border-color: #333;
+    color: #555;
+  }
 }
 
 .cc-btn-secondary {
   background: transparent;
   border: 1px solid #444;
   color: #ccc;
-}
 
-.cc-btn-secondary:hover {
-  background: #333;
-  color: white;
+  &:hover {
+    background: #333;
+    color: white;
+  }
+}
+</style>
+<style lang="scss">
+// Popover styles need to be global or use popper-class
+.cc-popover {
+  .settings-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .setting-group {
+    padding: 12px;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+
+    .group-title {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+
+      .group-icon {
+        color: #00b894;
+      }
+    }
+
+    .status-text {
+      font-size: 10px;
+      color: #999;
+      margin-top: 4px;
+    }
+  }
 }
 </style>

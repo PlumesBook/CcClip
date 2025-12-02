@@ -2,59 +2,49 @@
   <el-dialog v-model="visible" :title="dialogTitle" width="960px" top="8vh"
     class="resource-select-dialog cc-dark-dialog" destroy-on-close :close-on-click-modal="false" append-to-body
     @close="handleClose">
-    <div class="flex h-[600px] bg-[#181818] text-[#e0e0e0] overflow-hidden rounded-lg border border-[#333]">
+    <div class="dialog-layout">
       <!-- Left Sidebar -->
-      <div class="w-[200px] flex-shrink-0 bg-[#1f1f1f] border-r border-[#2a2a2a] flex flex-col py-4">
-
+      <div class="sidebar">
         <!-- AI Tool Entry -->
-        <div v-if="['video', 'image'].includes(resourceType)" class="px-2 mb-4">
-          <div
-            class="cursor-pointer px-3 py-2.5 rounded-md text-sm flex items-center gap-3 transition-all duration-200 select-none"
-            :class="isAIActive ? 'bg-gradient-to-r from-[#00b894]/20 to-transparent text-[#00b894] font-medium border border-[#00b894]/30' : 'text-[#ccc] hover:bg-[#2a2a2a]'"
-            @click="handleAIActive">
+        <div v-if="['video', 'image'].includes(resourceType)" class="sidebar-section">
+          <div class="sidebar-item ai-item" :class="{ 'is-active': isAIActive }" @click="handleAIActive">
             <el-icon :size="18">
               <MagicStick />
             </el-icon>
             <span>AI 生成</span>
-            <el-tag size="small" type="success" effect="dark"
-              class="ml-auto scale-75 origin-right bg-[#00b894] border-none text-white">NEW</el-tag>
+            <el-tag size="small" type="success" effect="dark" class="new-tag">NEW</el-tag>
           </div>
         </div>
 
-        <div class="px-4 mb-2">
-          <span class="text-xs font-bold text-[#666] uppercase tracking-wider">分类</span>
+        <div class="sidebar-header">
+          <span>分类</span>
         </div>
-        <div class="flex-1 overflow-y-auto custom-scrollbar px-2 space-y-1">
-          <div v-for="(cat, index) in categories" :key="index"
-            class="cursor-pointer px-3 py-2.5 rounded-md text-sm flex items-center gap-3 transition-all duration-200 select-none"
-            :class="(!isAIActive && activeCategoryIndex === index) ? 'bg-[#333] text-white font-medium' : 'text-[#999] hover:bg-[#2a2a2a] hover:text-[#ccc]'"
-            @click="handleCategoryClick(index)">
-            <el-icon :size="16"
-              :class="(!isAIActive && activeCategoryIndex === index) ? 'text-primary-400' : 'text-[#666]'">
+        <div class="category-list custom-scrollbar">
+          <div v-for="(cat, index) in categories" :key="index" class="sidebar-item"
+            :class="{ 'is-active': !isAIActive && activeCategoryIndex === index }" @click="handleCategoryClick(index)">
+            <el-icon :size="16" class="item-icon">
               <component :is="getCategoryIcon(cat.type)" />
             </el-icon>
-            <span class="truncate">{{ cat.title }}</span>
-            <span class="ml-auto text-xs" v-if="cat.items?.length">{{ cat.items.length }}</span>
+            <span class="item-text">{{ cat.title }}</span>
+            <span class="item-count" v-if="cat.items?.length">{{ cat.items.length }}</span>
           </div>
         </div>
       </div>
 
       <!-- Right Content -->
-      <div class="flex-1 flex flex-col bg-[#181818] min-w-0 relative">
-
+      <div class="main-content">
         <!-- AI Generator View -->
-        <div v-if="isAIActive" class="absolute inset-0 z-10">
+        <div v-if="isAIActive" class="ai-view-container">
           <AIGenerator :type="resourceType" @select="handleAISelect" />
         </div>
 
         <!-- Standard Grid View -->
         <template v-else>
           <!-- Top Bar -->
-          <div class="h-16 border-b border-[#2a2a2a] flex items-center px-6 gap-4 justify-between bg-[#181818]">
-            <div class="text-lg font-medium text-white">{{ currentCategory?.title || '全部素材' }}</div>
-
-            <div class="flex items-center gap-3">
-              <div class="relative w-64">
+          <div class="top-bar">
+            <div class="category-title">{{ currentCategory?.title || '全部素材' }}</div>
+            <div class="actions">
+              <div class="search-wrapper">
                 <el-input v-model="searchQuery" placeholder="搜索素材名称..." prefix-icon="Search" class="cc-search-input"
                   clearable @input="handleSearch" />
               </div>
@@ -62,76 +52,68 @@
           </div>
 
           <!-- Grid Area -->
-          <div class="flex-1 overflow-y-auto p-5 custom-scrollbar relative" v-loading="loading"
+          <div class="grid-container custom-scrollbar" v-loading="loading"
             element-loading-background="rgba(24, 24, 24, 0.8)">
 
             <!-- Empty State -->
-            <div v-if="!filteredList.length && !loading"
-              class="absolute inset-0 flex flex-col items-center justify-center text-[#666]">
-              <el-icon :size="64" class="mb-4 opacity-50">
+            <div v-if="!filteredList.length && !loading" class="empty-state">
+              <el-icon :size="64" class="empty-icon">
                 <Box />
               </el-icon>
-              <p class="text-sm">暂无相关素材</p>
+              <p>暂无相关素材</p>
             </div>
 
             <!-- Grid -->
             <div v-else class="resource-grid">
               <div v-for="(item, idx) in filteredList" :key="idx" class="resource-card group"
-                :class="{ 'selected': isItemSelected(item) }" @click="selectItem(item)" @dblclick="handleDbClick(item)">
+                :class="{ 'is-selected': isItemSelected(item) }" @click="selectItem(item)"
+                @dblclick="handleDbClick(item)">
                 <!-- Thumbnail -->
-                <div class="resource-thumb-container">
-                  <img :src="item.cover || item.source" class="resource-img" loading="lazy" @error="handleImgError" />
-                  <!-- Overlay -->
-                  <div class="resource-overlay"></div>
+                <div class="resource-thumb">
+                  <img :src="item.cover || item.source" class="thumb-img" loading="lazy" @error="handleImgError" />
+                  <div class="thumb-overlay"></div>
 
                   <!-- AI Badge -->
-                  <div v-if="item.isAI" class="absolute top-1.5 left-1.5">
-                    <el-tag size="small" effect="dark"
-                      class="bg-purple-600/80 border-none text-white text-[10px] h-5 px-1">AI</el-tag>
+                  <div v-if="item.isAI" class="badge-ai">
+                    <el-tag size="small" effect="dark" class="ai-tag">AI</el-tag>
                   </div>
 
-                  <!-- Duration Badge (Video Only, Bottom-Left) -->
-                  <span v-if="item.time"
-                    class="absolute bottom-1.5 left-1.5 text-[10px] font-mono text-white bg-black/60 backdrop-blur-sm px-1.5 py-0.5 rounded">
+                  <!-- Duration Badge -->
+                  <span v-if="item.time" class="badge-duration">
                     {{ formatTimeStr(item.time) }}
                   </span>
 
-                  <!-- Hover Info (for non-upload items) -->
-                  <div v-if="!item._isUpload"
-                    class="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end">
-                    <p class="text-xs text-white truncate drop-shadow-md">{{ item.name }}</p>
-                    <p class="text-[10px] text-[#ccc] truncate scale-90 origin-left mt-0.5">{{ item.width }}x{{
-                      item.height
-                      }}</p>
+                  <!-- Hover Info -->
+                  <div v-if="!item._isUpload" class="hover-info">
+                    <p class="info-name">{{ item.name }}</p>
+                    <p class="info-res">{{ item.width }}x{{ item.height }}</p>
                   </div>
 
                   <!-- Selected Check -->
-                  <div v-if="isItemSelected(item)"
-                    class="absolute top-1.5 right-1.5 bg-[#00b894] text-white rounded-full w-5 h-5 flex items-center justify-center shadow-lg animate-in zoom-in duration-200">
+                  <div v-if="isItemSelected(item)" class="selected-check">
                     <el-icon :size="12">
                       <Check />
                     </el-icon>
                   </div>
                 </div>
 
-                <!-- Filename Footer (Upload Items Only) -->
-                <div v-if="item._isUpload" class="resource-filename">
-                  <p class="text-[12px] truncate">{{ item.name }}</p>
+                <!-- Filename Footer -->
+                <div v-if="item._isUpload" class="card-footer">
+                  <p class="footer-name">{{ item.name }}</p>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Footer -->
-          <div class="h-16 border-t border-[#2a2a2a] flex items-center justify-between px-6 bg-[#1f1f1f]">
-            <div class="flex items-center text-xs text-[#888] gap-2">
-              <el-tag v-if="selectedItem" size="small" type="info" effect="dark"
-                class="bg-[#333] border-none text-[#ccc] max-w-[200px] truncate">
+          <div class="dialog-footer">
+            <div class="selection-info">
+              <el-tag v-if="selectedItem" size="small" type="info" effect="dark" class="selected-tag">
                 {{ selectedItem.name }}
               </el-tag>
               <span v-else>请选择一个素材进行替换</span>
             </div>
-            <div class="flex gap-1">
+            <div class="footer-actions">
               <el-button size="default" @click="handleClose" class="cc-btn-secondary">取消</el-button>
               <el-button type="primary" size="default" @click="confirmSelect" :disabled="!selectedItem"
                 class="cc-btn-primary">
@@ -325,7 +307,172 @@ watch(() => props.modelValue, (val) => {
 });
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
+.dialog-layout {
+  display: flex;
+  height: 600px;
+  background-color: #181818;
+  color: #e0e0e0;
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid #333;
+}
+
+.sidebar {
+  width: 200px;
+  flex-shrink: 0;
+  background-color: #1f1f1f;
+  border-right: 1px solid #2a2a2a;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 0;
+
+  .sidebar-section {
+    padding: 0 8px;
+    margin-bottom: 16px;
+  }
+
+  .sidebar-header {
+    padding: 0 16px;
+    margin-bottom: 8px;
+
+    span {
+      font-size: 12px;
+      font-weight: bold;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+  }
+
+  .category-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .sidebar-item {
+    cursor: pointer;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s;
+    user-select: none;
+    color: #999;
+
+    &:hover {
+      background-color: #2a2a2a;
+      color: #ccc;
+    }
+
+    &.is-active {
+      background-color: #333;
+      color: white;
+      font-weight: 500;
+
+      .item-icon {
+        color: #00b894;
+      }
+    }
+
+    &.ai-item {
+      &.is-active {
+        background: linear-gradient(to right, rgba(0, 184, 148, 0.2), transparent);
+        color: #00b894;
+        border: 1px solid rgba(0, 184, 148, 0.3);
+      }
+    }
+
+    .new-tag {
+      margin-left: auto;
+      transform: scale(0.75);
+      transform-origin: right center;
+      background-color: #00b894;
+      border: none;
+      color: white;
+    }
+
+    .item-count {
+      margin-left: auto;
+      font-size: 12px;
+    }
+  }
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: #181818;
+  min-width: 0;
+  position: relative;
+
+  .ai-view-container {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+  }
+}
+
+.top-bar {
+  height: 64px;
+  border-bottom: 1px solid #2a2a2a;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  background-color: #181818;
+
+  .category-title {
+    font-size: 18px;
+    font-weight: 500;
+    color: white;
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .search-wrapper {
+      position: relative;
+      width: 256px;
+    }
+  }
+}
+
+.grid-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  position: relative;
+}
+
+.empty-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+
+  .empty-icon {
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  p {
+    font-size: 14px;
+  }
+}
+
 .resource-grid {
   display: flex;
   flex-wrap: wrap;
@@ -343,88 +490,212 @@ watch(() => props.modelValue, (val) => {
   transition: all 0.2s;
   display: inline-flex;
   flex-direction: column;
+
+  &:hover {
+    border-color: #444;
+
+    .resource-thumb .thumb-img {
+      transform: scale(1.05);
+    }
+
+    .resource-thumb .thumb-overlay {
+      background-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .hover-info {
+      opacity: 1;
+    }
+  }
+
+  &.is-selected {
+    border-color: #00b894;
+    box-shadow: 0 0 0 2px #00b894;
+
+    .selected-check {
+      transform: scale(1);
+    }
+  }
 }
 
-.resource-card:hover {
-  border-color: #444;
-}
-
-.resource-card.selected {
-  border-color: #00b894;
-  box-shadow: 0 0 0 2px #00b894;
-}
-
-.resource-thumb-container {
+.resource-thumb {
   position: relative;
   height: 160px;
   overflow: hidden;
   line-height: 0;
+
+  .thumb-img {
+    height: 160px;
+    width: auto;
+    max-width: 280px;
+    object-fit: contain;
+    display: block;
+    transition: transform 0.5s;
+  }
+
+  .thumb-overlay {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0);
+    transition: background-color 0.2s;
+  }
+
+  .badge-ai {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+
+    .ai-tag {
+      background-color: rgba(147, 51, 234, 0.8); // purple-600/80
+      border: none;
+      color: white;
+      font-size: 10px;
+      height: 20px;
+      padding: 0 4px;
+    }
+  }
+
+  .badge-duration {
+    position: absolute;
+    bottom: 6px;
+    left: 6px;
+    font-size: 10px;
+    font-family: monospace;
+    color: white;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .hover-info {
+    position: absolute;
+    inset: 0;
+    top: auto;
+    padding: 8px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.5), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+
+    .info-name {
+      font-size: 12px;
+      color: white;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    }
+
+    .info-res {
+      font-size: 10px;
+      color: #ccc;
+      margin-top: 2px;
+      transform: scale(0.9);
+      transform-origin: left bottom;
+    }
+  }
+
+  .selected-check {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background-color: #00b894;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
 }
 
-.resource-img {
-  height: 160px;
-  width: auto;
-  max-width: 280px;
-  object-fit: contain;
-  display: block;
-  transition: transform 0.5s;
-}
-
-.resource-card:hover .resource-img {
-  transform: scale(1.05);
-}
-
-.resource-overlay {
-  position: absolute;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0);
-  transition: background-color 0.2s;
-}
-
-.resource-card:hover .resource-overlay {
-  background-color: rgba(0, 0, 0, 0.1);
-}
-
-.resource-filename {
+.card-footer {
   position: absolute;
   bottom: 0;
-  width: 100%;
   width: 100%;
   padding: 2px 8px;
   background-color: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(1px);
   box-sizing: border-box;
+
+  .footer-name {
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
+.dialog-footer {
+  height: 64px;
+  border-top: 1px solid #2a2a2a;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  background-color: #1f1f1f;
+
+  .selection-info {
+    font-size: 12px;
+    color: #888;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .selected-tag {
+      background-color: #333;
+      border: none;
+      color: #ccc;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  .footer-actions {
+    display: flex;
+    gap: 4px;
+  }
 }
 
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
+// Global/Common overrides
+.custom-scrollbar {
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: #444;
+    border-radius: 4px;
+
+    &:hover {
+      background-color: #555;
+    }
+  }
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #444;
-  border-radius: 4px;
-}
+.cc-dark-dialog {
+  :deep(.el-dialog__header) {
+    display: none;
+  }
 
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: #555;
-}
+  :deep(.el-dialog__body) {
+    padding: 0;
+    background: transparent;
+  }
 
-.cc-dark-dialog :deep(.el-dialog__header) {
-  display: none;
-}
-
-.cc-dark-dialog :deep(.el-dialog__body) {
-  padding: 0;
-  background: transparent;
-}
-
-.cc-dark-dialog :deep(.el-dialog) {
-  background: transparent;
-  box-shadow: none;
+  :deep(.el-dialog) {
+    background: transparent;
+    box-shadow: none;
+  }
 }
 
 :deep(.cc-search-input .el-input__wrapper) {
@@ -433,10 +704,10 @@ watch(() => props.modelValue, (val) => {
   border: 1px solid #333;
   border-radius: 4px;
   padding: 4px 12px;
-}
 
-:deep(.cc-search-input .el-input__wrapper.is-focus) {
-  border-color: #00b894;
+  &.is-focus {
+    border-color: #00b894;
+  }
 }
 
 :deep(.cc-search-input .el-input__inner) {
@@ -448,28 +719,28 @@ watch(() => props.modelValue, (val) => {
   background: transparent;
   border: 1px solid #444;
   color: #ccc;
-}
 
-.cc-btn-secondary:hover {
-  border-color: #666;
-  color: white;
-  background: rgba(255, 255, 255, 0.05);
+  &:hover {
+    border-color: #666;
+    color: white;
+    background: rgba(255, 255, 255, 0.05);
+  }
 }
 
 .cc-btn-primary {
   background-color: #00b894;
   border-color: #00b894;
   color: white;
-}
 
-.cc-btn-primary:hover {
-  background-color: #00a383;
-  border-color: #00a383;
-}
+  &:hover {
+    background-color: #00a383;
+    border-color: #00a383;
+  }
 
-.cc-btn-primary:disabled {
-  background-color: #2a2a2a;
-  border-color: #333;
-  color: #555;
+  &:disabled {
+    background-color: #2a2a2a;
+    border-color: #333;
+    color: #555;
+  }
 }
 </style>
