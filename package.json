@@ -23,6 +23,7 @@
     "element-plus": "^2.7.3",
     "lodash-es": "^4.17.21",
     "pinia": "^2.0.28",
+    "splitpanes": "^4.0.4",
     "vue": "^3.4.21",
     "vue-hooks-plus": "1.6.0-alpha.2",
     "vue-router": "^4.3.0",

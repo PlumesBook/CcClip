@@ -26,6 +26,9 @@ importers:
       pinia:
         specifier: ^2.0.28
         version: 2.3.1(typescript@4.7.4)(vue@3.5.24(typescript@4.7.4))
+      splitpanes:
+        specifier: ^4.0.4
+        version: 4.0.4(vue@3.5.24(typescript@4.7.4))
       vue:
         specifier: ^3.4.21
         version: 3.5.24(typescript@4.7.4)
@@ -2649,6 +2652,11 @@ packages:
   split-on-first@1.1.0:
     resolution: {integrity: sha512-43ZssAJaMusuKWL8sKUBQXHWOpq8d6CfN/u1p4gUzfJkM05C8rxTmYrkIPTXapZpORA6LkkzcUulJ8FqA7Uudw==}
     engines: {node: '>=6'}
+
+  splitpanes@4.0.4:
+    resolution: {integrity: sha512-RbysugZhjbCw5fgplvk3hOXr41stahQDtZhHVkhnnJI6H4wlGDhM2kIpbehy7v92duy9GnMa8zIhHigIV1TWtg==}
+    peerDependencies:
+      vue: ^3.2.0
 
   stable@0.1.8:
     resolution: {integrity: sha512-ji9qxRnOVfcuLDySj9qzhGSEFVobyt1kIOSkj1qZzYLzq7Tos/oUUWvotUPQLlrsidqsK6tBH89Bc9kL5zHA6w==}
@@ -5784,6 +5792,10 @@ snapshots:
   spdx-license-ids@3.0.22: {}
 
   split-on-first@1.1.0: {}
+
+  splitpanes@4.0.4(vue@3.5.24(typescript@4.7.4)):
+    dependencies:
+      vue: 3.5.24(typescript@4.7.4)
 
   stable@0.1.8: {}
 

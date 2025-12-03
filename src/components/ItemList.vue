@@ -1,45 +1,54 @@
 <template>
-  <div class="cc-panel" :class="{ 'is-collapsed': collapse }">
-    <div class="cc-panel-inner">
-      <!-- Search Bar -->
-      <div class="cc-search-bar">
-        <div class="cc-search-input">
-          <Search class="cc-search-icon" />
-          <input type="text" placeholder="搜尋範本" />
-        </div>
-        <button class="cc-filter-btn">
-          <Filter />
-        </button>
-      </div>
-
-      <!-- Scrollable Content -->
-      <div class="cc-panel-scroll">
-        <!-- Section Title with Change -->
-        <div class="cc-section-head">
-          <span class="cc-section-title">{{ title }}</span>
-          <span class="cc-change-btn">
-            <Refresh class="cc-change-icon" />
-            <span>Change</span>
-          </span>
+  <div class="resize-bar-container">
+    <div class="cc-panel" :class="{ 'is-collapsed': collapse }"
+      :style="{ width: collapse ? '0px' : panelWidth + 'px' }">
+      <div class="cc-panel-inner">
+        <!-- Search Bar -->
+        <div class="cc-search-bar">
+          <div class="cc-search-input">
+            <Search class="cc-search-icon" />
+            <input type="text" placeholder="搜尋範本" />
+          </div>
+          <button class="cc-filter-btn">
+            <Filter />
+          </button>
         </div>
 
-        <!-- Groups -->
-        <template v-for="(subData, index) of listData" :key="`${index}-${subData.type}`">
-          <SubList :type="subData.type" :listData="subData" @upload="handleUpload($event, index)"
-            @delete="handleDelete($event, index)" />
-        </template>
+        <!-- Scrollable Content -->
+        <div class="cc-panel-scroll">
+          <!-- Section Title with Change -->
+          <div class="cc-section-head">
+            <span class="cc-section-title">{{ title }}</span>
+            <span class="cc-change-btn">
+              <Refresh class="cc-change-icon" />
+              <span>Change</span>
+            </span>
+          </div>
+
+          <!-- Groups -->
+          <template v-for="(subData, index) of listData" :key="`${index}-${subData.type}`">
+            <SubList :type="subData.type" :listData="subData" @upload="handleUpload($event, index)"
+              @delete="handleDelete($event, index)" />
+          </template>
+        </div>
       </div>
+    </div>
+
+    <!-- Resize Handle -->
+    <div class="resize-trigger-content" @mousedown="startResize">
+      <div class="resize-high-light-bar"></div>
     </div>
 
     <!-- Collapse Handle -->
-    <div class="cc-collapse-handle" @click="switchCollapse" v-show="!collapse">
-      <ArrowLeft />
-    </div>
+    <span class="resize-handler-btn" @click="switchCollapse">
+      <ArrowLeft v-if="!collapse" />
+      <ArrowRight v-else />
+    </span>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Search, Filter, Refresh, ArrowLeft } from '@element-plus/icons-vue';
+import { Search, Filter, Refresh, ArrowLeft, ArrowRight } from '@element-plus/icons-vue';
 import { computed, ref, watch } from 'vue';
 import SubList from '@/components/SubList.vue';
 import { getData } from '@/api/mock';
@@ -172,6 +181,36 @@ onUnmounted(() => {
   window.removeEventListener('cc-upload-success', onGlobalUpload);
 });
 
+const panelWidth = ref(320);
+const minWidth = 200;
+const maxWidth = 600;
+
+function startResize(e: MouseEvent) {
+  e.preventDefault();
+  const startX = e.clientX;
+  const startWidth = panelWidth.value;
+
+  const onMouseMove = (moveEvent: MouseEvent) => {
+    const deltaX = moveEvent.clientX - startX;
+    let newWidth = startWidth + deltaX;
+    if (newWidth < minWidth) newWidth = minWidth;
+    if (newWidth > maxWidth) newWidth = maxWidth;
+    panelWidth.value = newWidth;
+  };
+
+  const onMouseUp = () => {
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  };
+
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+  document.body.style.cursor = 'col-resize';
+  document.body.style.userSelect = 'none';
+}
+
 const title = computed(() => props.title);
 const collapse = ref(props.defaultCollapse);
 function switchCollapse() {
@@ -235,40 +274,70 @@ async function handleDelete(item: Record<string, any>, subIndex: number) {
 </script>
 
 <style lang="scss" scoped>
+.resize-bar-container {
+  position: relative;
+  display: flex;
+  height: 100%;
+  flex-direction: row;
+}
+
 .cc-panel {
   position: relative;
   display: flex;
   flex-direction: column;
-  width: 320px;
   height: 100%;
   background-color: #1a1a1c;
-  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 0.05s linear;
+  /* Faster transition for resize, maybe remove for drag? */
   overflow: visible;
   overflow-x: hidden;
+  flex-shrink: 0;
 
   &.is-collapsed {
     width: 0;
-
-    .cc-collapse-handle {
-      display: none;
-    }
+    padding: 0;
+    overflow: hidden;
   }
 }
 
 .cc-panel-inner {
   display: flex;
   flex-direction: column;
-  width: 320px;
+  width: 100%;
   height: 100%;
   overflow: hidden;
 }
 
-.cc-collapse-handle {
+.resize-trigger-content {
+  position: relative;
+  width: 10px;
+  height: 100%;
+  cursor: col-resize;
+  display: flex;
+  justify-content: center;
+  z-index: 10;
+  margin-left: -5px;
+  /* Overlap slightly */
+
+  &:hover .resize-high-light-bar {
+    background-color: #00bebd;
+  }
+}
+
+.resize-high-light-bar {
+  width: 2px;
+  height: 100%;
+  background-color: transparent;
+  transition: background-color 0.2s;
+}
+
+.resize-handler-btn {
   position: absolute;
   top: 50%;
-  right: -12px;
-  transform: translateY(-50%);
-  width: 12px;
+  left: 100%;
+  /* Position relative to container */
+  transform: translate(-50%, -50%);
+  width: 16px;
   height: 32px;
   background-color: #1a1a1c;
   border: 1px solid #2a2b2d;
@@ -278,9 +347,11 @@ async function handleDelete(item: Record<string, any>, subIndex: number) {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 10;
+  z-index: 20;
   color: #6a6a6a;
   transition: all 0.15s ease;
+  margin-left: -5px;
+  /* Adjust for overlap */
 
   svg {
     width: 10px;
