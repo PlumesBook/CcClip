@@ -72,32 +72,6 @@
         </button>
       </div>
 
-      <!-- Config Form -->
-      <div class="config-panel">
-        <div v-if="activeTab === 'video'" class="config-items">
-          <div class="config-item">
-            <span class="label">模型</span>
-            <el-select v-model="videoConfig.model" size="small" class="config-select cc-select">
-              <el-option label="Hailuo-2.3" value="MiniMax-Hailuo-2.3" />
-            </el-select>
-          </div>
-        </div>
-        <div v-else class="config-items">
-          <div class="config-item">
-            <span class="label">模型</span>
-            <el-select v-model="imageConfig.model" size="small" class="config-select cc-select">
-              <el-option label="Image-01" value="image-01" />
-            </el-select>
-          </div>
-          <div class="config-item">
-            <span class="label">比例</span>
-            <el-select v-model="imageConfig.aspectRatio" size="small" class="config-select cc-select">
-              <el-option v-for="opt in aspectRatioOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
-            </el-select>
-          </div>
-        </div>
-      </div>
-
       <!-- Input Area -->
       <div class="input-section">
         <div class="textarea-wrapper">
@@ -111,7 +85,29 @@
         </div>
 
         <div class="action-bar">
-          <span class="cost-tip">{{ hasApiKey ? '* 生成一次消耗约 ¥3-5 元' : '* 演示模式 (未配置API)' }}</span>
+          <!-- Config Items -->
+          <div class="config-items">
+            <div v-if="activeTab === 'video'" class="config-item">
+              <span class="label">模型</span>
+              <el-select v-model="videoConfig.model" size="small" class="config-select cc-select">
+                <el-option label="Hailuo-2.3" value="MiniMax-Hailuo-2.3" />
+              </el-select>
+            </div>
+            <template v-else>
+              <div class="config-item">
+                <span class="label">模型</span>
+                <el-select v-model="imageConfig.model" size="small" class="config-select cc-select">
+                  <el-option label="Image-01" value="image-01" />
+                </el-select>
+              </div>
+              <div class="config-item">
+                <span class="label">比例</span>
+                <el-select v-model="imageConfig.aspectRatio" size="small" class="config-select cc-select">
+                  <el-option v-for="opt in aspectRatioOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+                </el-select>
+              </div>
+            </template>
+          </div>
           <el-button type="primary" class="cc-btn-primary generate-btn" :loading="isGenerating" @click="handleGenerate"
             :disabled="!prompt.trim()">
             {{ isGenerating ? '生成中...' : '立即生成' }}
@@ -827,35 +823,6 @@ onUnmounted(() => {
   }
 }
 
-.config-panel {
-  margin-bottom: 16px;
-  background-color: #252525;
-  border-radius: 8px;
-  padding: 16px;
-  border: 1px solid #333;
-
-  .config-items {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .config-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    .label {
-      font-size: 12px;
-      color: #aaa;
-    }
-
-    .config-select {
-      width: 160px;
-    }
-  }
-}
-
 .input-section {
   margin-bottom: 32px;
   display: flex;
@@ -882,14 +849,33 @@ onUnmounted(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 16px;
 
-    .cost-tip {
-      font-size: 12px;
-      color: #666;
+    .config-items {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .config-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .label {
+        font-size: 12px;
+        color: #888;
+        white-space: nowrap;
+      }
+
+      .config-select {
+        width: 120px;
+      }
     }
 
     .generate-btn {
       padding: 0 32px;
+      margin-left: auto;
     }
   }
 }
