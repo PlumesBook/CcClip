@@ -164,13 +164,27 @@
         <!-- Result Viewer (Image) -->
         <div v-if="generatedImageUrl" class="result-content">
           <div class="preview-box">
-            <img :src="generatedImageUrl" class="preview-media" />
+            <img :src="generatedImageUrl" class="preview-media" @error="handleImageError" />
+            <!-- Show message if image fails to load -->
+            <div v-if="imageLoadFailed" class="image-load-error">
+              <el-icon :size="48" class="error-icon">
+                <Picture />
+              </el-icon>
+              <p class="error-text">由于安全策略限制，无法直接显示图片</p>
+              <p class="error-hint">请使用下方按钮下载或在新窗口打开</p>
+            </div>
           </div>
           <div class="result-actions">
-            <span class="success-text">获取成功</span>
+            <span class="success-text">{{ imageLoadFailed ? '图片已生成' : '获取成功' }}</span>
             <div class="btn-group">
+              <el-button @click="openImageInNewTab" class="cc-btn-secondary" v-if="imageLoadFailed">
+                新窗口打开
+              </el-button>
+              <el-button @click="downloadImage" class="cc-btn-secondary">
+                {{ imageLoadFailed ? '下载图片' : '下载' }}
+              </el-button>
               <el-button @click="clearResult" class="cc-btn-secondary">清除</el-button>
-              <el-button type="primary" @click="saveAndSelect" class="cc-btn-primary">
+              <el-button type="primary" @click="saveAndSelect" class="cc-btn-primary" :disabled="imageLoadFailed">
                 保存并使用
               </el-button>
             </div>
@@ -208,6 +222,7 @@ const currentTask = ref<string | null>(null);
 const statusText = ref('正在加入队列...');
 const generatedVideoUrl = ref('');
 const generatedImageUrl = ref('');
+const imageLoadFailed = ref(false); // Track if image failed to load due to COEP
 const pollTimer = ref<any>(null);
 
 const activeTab = ref<'video' | 'image'>(props.type === 'image' ? 'image' : 'video');
@@ -241,7 +256,64 @@ function saveApiKey() {
   ElMessage.success(key ? 'API Key 已保存' : 'API Key 已清除');
 }
 
+// --- Helper Functions for COEP Bypass ---
+// --- Fix: Fetch video as Blob to bypass COEP ---
+async function finishGeneration(url: string) {
+  stopPolling();
+  statusText.value = '正在下载视频流...';
+
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+
+    generatedVideoUrl.value = blobUrl;
+    statusText.value = '完成';
+  } catch (e) {
+    console.error(e);
+    ElMessage.error('视频流下载失败 (Network/CORS)');
+    // Fallback: Try showing direct URL (might fail if COEP is strict)
+    generatedVideoUrl.value = url;
+    statusText.value = '完成 (Direct)';
+  } finally {
+    isGenerating.value = false;
+  }
+}
+
+// --- Fix: Fetch image as Blob to bypass COEP ---
+// Note: Due to strict COEP policy, fetching cross-origin images may fail
+// In that case, we'll try to use the direct URL and let the browser handle it
+async function finishImageGeneration(url: string) {
+  statusText.value = '正在加载图片...';
+
+  try {
+    // Try fetching as blob first (may fail due to COEP)
+    const res = await fetch(url, { mode: 'cors' });
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+
+    generatedImageUrl.value = blobUrl;
+    statusText.value = '完成';
+    isGenerating.value = false;
+  } catch (e) {
+    console.warn('Failed to fetch image as blob, using direct URL:', e);
+
+    // Fallback: Use direct URL
+    // This may still fail to display due to COEP, but at least we tried
+    generatedImageUrl.value = url;
+    statusText.value = '完成';
+    isGenerating.value = false;
+
+    // Show warning to user
+    ElMessage.warning({
+      message: '图片加载受限，建议下载后重新上传使用',
+      duration: 5000
+    });
+  }
+}
+
 // --- Generation Logic ---
+
 // --- Generation Logic ---
 async function handleGenerate() {
   if (!prompt.value.trim()) return;
@@ -279,9 +351,8 @@ async function handleGenerate() {
       });
       currentTask.value = id;
       if (image_urls && image_urls.length > 0) {
-        generatedImageUrl.value = image_urls[0];
-        statusText.value = '完成';
-        isGenerating.value = false;
+        // Convert remote image URL to blob URL to bypass COEP
+        await finishImageGeneration(image_urls[0]);
       } else {
         // Fallback if async (though currently it seems sync)
         statusText.value = '生成完成，但未返回图片链接';
@@ -407,28 +478,34 @@ function stopPolling() {
   }
 }
 
-// --- Fix: Fetch video as Blob to bypass COEP ---
-async function finishGeneration(url: string) {
-  stopPolling();
+function handleImageError() {
+  console.warn('Image failed to load due to COEP policy');
+  imageLoadFailed.value = true;
+}
 
-  // Show loading state while fetching blob
-  statusText.value = '正在下载视频流...';
+function openImageInNewTab() {
+  if (generatedImageUrl.value) {
+    window.open(generatedImageUrl.value, '_blank');
+  }
+}
+
+async function downloadImage() {
+  if (!generatedImageUrl.value) return;
 
   try {
-    const res = await fetch(url);
-    const blob = await res.blob();
-    const blobUrl = URL.createObjectURL(blob);
+    // Try to download via link
+    const link = document.createElement('a');
+    link.href = generatedImageUrl.value;
+    link.download = `ai_image_${Date.now()}.png`;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 
-    generatedVideoUrl.value = blobUrl;
-    statusText.value = '完成';
+    ElMessage.success('已开始下载');
   } catch (e) {
-    console.error(e);
-    ElMessage.error('视频流下载失败 (Network/CORS)');
-    // Fallback: Try showing direct URL (might fail if COEP is strict)
-    generatedVideoUrl.value = url;
-    statusText.value = '完成 (Direct)';
-  } finally {
-    isGenerating.value = false;
+    console.error('Download failed:', e);
+    ElMessage.error('下载失败，请尝试在新窗口打开后手动保存');
   }
 }
 
@@ -441,6 +518,7 @@ function clearResult() {
   }
   generatedVideoUrl.value = '';
   generatedImageUrl.value = '';
+  imageLoadFailed.value = false;
   currentTask.value = null;
 }
 
@@ -936,6 +1014,37 @@ onUnmounted(() => {
     .btn-group {
       display: flex;
       gap: 4px;
+    }
+  }
+
+  .image-load-error {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(24, 24, 24, 0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    text-align: center;
+    z-index: 10;
+
+    .error-icon {
+      color: #666;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .error-text {
+      font-size: 14px;
+      color: #ccc;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .error-hint {
+      font-size: 12px;
+      color: #888;
     }
   }
 }
