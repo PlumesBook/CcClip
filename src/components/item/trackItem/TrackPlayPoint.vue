@@ -49,7 +49,11 @@ function handleMouseDown(event: MouseEvent) {
       const targetPixel = Math.max(0, newPixel);
 
       // Convert back to frame
-      const newFrame = getSelectFrame(targetPixel, scale, step);
+      let newFrame = getSelectFrame(targetPixel, scale, step);
+
+      // Limit to max frame
+      const maxFrame = playStore.frameCount;
+      newFrame = Math.min(newFrame, maxFrame);
 
       playStore.playStartFrame = newFrame;
       playStore.playAudioFrame = newFrame;

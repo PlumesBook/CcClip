@@ -6,6 +6,7 @@
 
 <script setup lang="ts">
 import { usePageState } from '@/stores/pageState';
+import { usePlayerState } from '@/stores/playerState';
 import { drawTimeLine, getSelectFrame } from '@/utils/canvasUtil';
 import type { UserConfig, CanvasConfig } from '@/utils/canvasUtil';
 import { ref, computed, onMounted, nextTick, watch, reactive, toRefs } from 'vue';
@@ -120,7 +121,9 @@ function handleClick(event: MouseEvent) {
 }
 
 function updateFrame(offset: number) {
-  const frameIndex = getSelectFrame(props.start + offset, props.scale, props.step);
+  const playerStore = usePlayerState();
+  let frameIndex = getSelectFrame(props.start + offset, props.scale, props.step);
+  frameIndex = Math.max(0, Math.min(frameIndex, playerStore.frameCount));
   emits('selectFrame', frameIndex);
 }
 onMounted(() => {
