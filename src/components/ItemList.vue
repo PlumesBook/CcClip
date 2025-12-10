@@ -7,7 +7,7 @@
         <div class="cc-search-bar">
           <div class="cc-search-input">
             <Search class="cc-search-icon" />
-            <input type="text" placeholder="搜尋範本" />
+            <input type="text" placeholder="搜索" />
           </div>
           <button class="cc-filter-btn">
             <Filter />
@@ -17,13 +17,13 @@
         <!-- Scrollable Content -->
         <div class="cc-panel-scroll">
           <!-- Section Title with Change -->
-          <div class="cc-section-head">
+          <!-- <div class="cc-section-head">
             <span class="cc-section-title">{{ title }}</span>
             <span class="cc-change-btn">
               <Refresh class="cc-change-icon" />
               <span>Change</span>
             </span>
-          </div>
+          </div> -->
 
           <!-- Groups -->
           <template v-for="(subData, index) of listData" :key="`${index}-${subData.type}`">
